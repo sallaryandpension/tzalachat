@@ -1,4 +1,4 @@
-<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#6b2e5f"><meta name="apple-mobile-web-app-capable" content="yes"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%236b2e5f' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='7.5' fill='none' stroke='%236b2e5f' stroke-width='2' opacity='.55'/%3E%3C/svg%3E"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
+<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#6b2e5f"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%236b2e5f' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='7.5' fill='none' stroke='%236b2e5f' stroke-width='2' opacity='.55'/%3E%3C/svg%3E"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
 <title>צלחת</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -389,6 +389,28 @@ function toast(msg, actionLabel, action) {
   clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, actionLabel ? 6000 : 2600);
 }
 
+/* Install as an app: the browser offers this only on the website (Android Chrome), never inside Claude. */
+let installPrompt = null;
+const INSTALL_DISMISSED = 'tzalachat-install-dismissed';
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; if (state.loaded) safeRender(); });
+window.addEventListener('appinstalled', () => { installPrompt = null; toast('צלחת הותקנה במכשיר'); if (state.loaded) safeRender(); });
+function installButton(label) {
+  if (!installPrompt) return null;
+  return h('button', { class: 'btn primary', type: 'button', onclick: async () => {
+    const p = installPrompt; installPrompt = null;
+    try { await p.prompt(); await p.userChoice; } catch (e) {}
+    safeRender();
+  } }, label || 'התקנה כאפליקציה');
+}
+function installCard() {
+  let dismissed = false; try { dismissed = localStorage.getItem(INSTALL_DISMISSED) === '1'; } catch (e) {}
+  if (!installPrompt || dismissed) return null;
+  return h('section', { class: 'card row', 'aria-label': 'התקנה' },
+    h('span', { style: 'flex:1;min-width:200px' }, h('b', null, 'אפשר להתקין את צלחת כאפליקציה.'), ' היא תופיע במסך הבית, תיפתח בחלון משלה ותעבוד גם בלי אינטרנט.'),
+    installButton('התקנה'),
+    h('button', { class: 'btn ghost', type: 'button', onclick: () => { try { localStorage.setItem(INSTALL_DISMISSED, '1'); } catch (e) {} render(); } }, 'לא עכשיו'));
+}
+
 /* ---------- state ---------- */
 const state = {
   mode: 'loading', loaded: false, slow: false, readonly: false, dbError: null,
@@ -720,7 +742,7 @@ function render() {
   if (state.dbError) kids.push(h('div', { class: 'notice bad' }, 'אין גישה לנתונים השמורים כרגע. רעננו את הדף מאוחר יותר.'));
   if (state.readonly) kids.push(h('div', { class: 'notice warn' }, 'בתצוגה הזו אי אפשר לשמור שינויים.'));
   if (state.slow) kids.push(h('div', { class: 'notice warn' }, 'ייתכן שהנתונים אינם מעודכנים. ממתין לחיבור…'));
-  if (state.view === 'today') kids.push(...renderToday());
+  if (state.view === 'today') { const ic = installCard(); if (ic) kids.push(ic); kids.push(...renderToday()); }
   else if (state.view === 'week') kids.push(...renderPeriod('week'));
   else if (state.view === 'month') kids.push(...renderPeriod('month'));
   else kids.push(...renderProfile(false));
@@ -742,6 +764,7 @@ function renderChooser() {
         h('span', { class: 'go', 'aria-hidden': 'true' }, '‹')));
     })) : h('p', { style: 'margin:0' }, 'אין עדיין משתמשים. מוסיפים משתמש, ממלאים כמה פרטים, ומתחילים לרשום.'),
     h('button', { class: 'btn primary big', onclick: startNewUser }, '+ משתמש חדש'),
+    installPrompt ? h('div', { class: 'row' }, installButton('התקנה כאפליקציה בטלפון'), h('span', { class: 'muted small' }, 'אייקון במסך הבית, חלון משלה, עובדת גם בלי אינטרנט.')) : null,
     h('p', { class: 'muted small', style: 'margin:0' }, state.mode === 'db'
       ? 'המשתמשים נשמרים בחשבון Claude שלך, ולכל אחד יש פרופיל, יעדים ויומן משלו. אין סיסמה: מי שפותח את האפליקציה בחשבון הזה יכול לעבור ביניהם. מי שיש לו חשבון Claude משלו יכול לקבל את הקישור ולהשתמש בה מהחשבון שלו.'
       : 'המשתמשים נשמרים בדפדפן הזה, ולכל אחד יש פרופיל, יעדים ויומן משלו. אין סיסמה, וכל מי שמשתמש בדפדפן הזה יכול לעבור ביניהם.'))];
@@ -1279,6 +1302,8 @@ function renderProfile(onboarding) {
         ? 'היומן נשמר בחשבון Claude שלך ונגיש רק לך, גם מהטלפון וגם מהמחשב.'
         : 'היומן נשמר בדפדפן הזה בלבד. בדפדפן או במכשיר אחר הוא לא יופיע.'),
       h('p', { class: 'muted small', style: 'margin:0' }, `ימים מתועדים: ${Object.keys(state.days).length} · מאכלים שהוספת בעצמך: ${state.custom.length}`),
+      installPrompt ? h('div', { class: 'row' }, installButton('התקנה כאפליקציה בטלפון'),
+        h('span', { class: 'muted small' }, 'אייקון במסך הבית, חלון משלה, עובדת גם בלי אינטרנט.')) : null,
       h('div', { class: 'row' }, h('button', { class: 'btn', type: 'button', onclick: logout }, 'יציאה מהמשתמש'),
         h('span', { class: 'muted small' }, 'חוזרים לרשימת המשתמשים. משם אפשר להיכנס למשתמש אחר או להוסיף משתמש חדש.')),
       h('div', { class: 'row' }, delBtn, h('span', { class: 'muted small' }, 'מוחק את הפרופיל, היומן והמאכלים של המשתמש הזה בלבד. אי אפשר לשחזר.'))));
@@ -1515,4 +1540,5 @@ initStore();
 })();
 </script>
 
+<script>if('serviceWorker' in navigator){addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}</script>
 </body></html>
