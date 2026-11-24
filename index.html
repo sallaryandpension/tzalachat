@@ -1,0 +1,1518 @@
+<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#6b2e5f"><meta name="apple-mobile-web-app-capable" content="yes"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%236b2e5f' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='7.5' fill='none' stroke='%236b2e5f' stroke-width='2' opacity='.55'/%3E%3C/svg%3E"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
+<title>צלחת</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Hebrew:wght@400;500;600;700&family=Secular+One&display=swap">
+<style>
+/* Layout: one narrow column, a sticky header with the four views as tabs, a bottom sheet for adding food. */
+:root {
+  --bg: #f4f6f5; --surface: #ffffff; --surface-2: #edf1ef; --ink: #13201b; --ink-2: #4b5a54; --muted: #6f7c77;
+  --line: #dde4e0; --grid: #e6ebe8; --axis: #c3cbc7;
+  --accent: #6b2e5f; --accent-hover: #57234d; --accent-soft: #f4e9f1; --on-accent: #ffffff;
+  --protein: #2a78d6; --carb: #eb6834; --fat: #1baf7a;
+  --good: #0ca30c; --good-ink: #006300; --warn: #fab219; --warn-ink: #855400; --bad: #d03b3b; --bad-ink: #b42323;
+  --scrim: rgba(12, 20, 17, 0.45);
+  --shadow: 0 1px 2px rgba(19, 32, 27, 0.06), 0 6px 20px rgba(19, 32, 27, 0.06);
+  --f-display: "Secular One", "IBM Plex Sans Hebrew", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans Hebrew", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  --r: 14px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f1513; --surface: #161e1b; --surface-2: #1e2824; --ink: #eef2f0; --ink-2: #b9c5c0; --muted: #8c9994;
+    --line: #2a352f; --grid: #232d29; --axis: #3a4641;
+    --accent: #d89bc8; --accent-hover: #e6b6d9; --accent-soft: #2d2029; --on-accent: #1d1019;
+    --protein: #3987e5; --carb: #d95926; --fat: #199e70;
+    --good: #0ca30c; --good-ink: #46c246; --warn: #fab219; --warn-ink: #f5c04d; --bad: #e66767; --bad-ink: #f29191;
+    --scrim: rgba(0, 0, 0, 0.6); --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f1513; --surface: #161e1b; --surface-2: #1e2824; --ink: #eef2f0; --ink-2: #b9c5c0; --muted: #8c9994;
+  --line: #2a352f; --grid: #232d29; --axis: #3a4641;
+  --accent: #d89bc8; --accent-hover: #e6b6d9; --accent-soft: #2d2029; --on-accent: #1d1019;
+  --protein: #3987e5; --carb: #d95926; --fat: #199e70;
+  --good: #0ca30c; --good-ink: #46c246; --warn: #fab219; --warn-ink: #f5c04d; --bad: #e66767; --bad-ink: #f29191;
+  --scrim: rgba(0, 0, 0, 0.6); --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
+#app { min-height: 100vh; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+h1, h2, h3 { font-family: var(--f-display); font-weight: 400; line-height: 1.2; margin: 0; text-wrap: balance; }
+.num { font-variant-numeric: tabular-nums; }
+
+/* Header */
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--surface); }
+.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--surface); border-bottom: 1px solid var(--line); }
+.top-inner, .wrap { max-width: 760px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.top-inner { display: flex; align-items: center; gap: 12px; padding-block: 10px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 8px; font-family: var(--f-display); font-size: 22px; color: var(--accent); }
+.brand svg { width: 26px; height: 26px; }
+.tabs { display: flex; gap: 4px; margin-inline-start: auto; background: var(--surface-2); padding: 3px; border-radius: 999px; }
+.tabs a { text-decoration: none; color: var(--ink-2); padding: 6px 14px; border-radius: 999px; font-weight: 500; font-size: 14px; }
+.tabs a[aria-current="page"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
+@media (max-width: 460px) { .tabs { margin-inline-start: 0; width: 100%; justify-content: space-between; } .tabs a { flex: 1; text-align: center; padding: 6px 4px; } }
+
+main.wrap { padding-block: 18px 48px; display: grid; gap: 16px; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 16px; min-width: 0; }
+.card h2 { font-size: 20px; }
+.card h3 { font-size: 17px; }
+.muted { color: var(--muted); }
+.small { font-size: 13px; }
+.row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.spacer { flex: 1; }
+.stack { display: grid; gap: 12px; }
+.notice { border-radius: 10px; padding: 10px 12px; background: var(--surface-2); color: var(--ink-2); font-size: 14px; }
+.notice.warn { background: color-mix(in srgb, var(--warn) 16%, var(--surface)); color: var(--ink); }
+.notice.bad { background: color-mix(in srgb, var(--bad) 14%, var(--surface)); color: var(--ink); }
+
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 8px 14px; font-weight: 500; }
+.btn:hover { background: var(--surface-2); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.btn.primary:hover { background: var(--accent-hover); }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--accent); padding-inline: 8px; }
+.btn.ghost:hover { background: var(--accent-soft); }
+.btn.danger { color: var(--bad-ink); }
+.btn.big { padding: 12px 18px; font-size: 16px; width: 100%; }
+.icon-btn { width: 36px; height: 36px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); display: inline-grid; place-items: center; font-size: 18px; line-height: 1; }
+.icon-btn:hover { background: var(--surface-2); }
+.icon-btn:disabled { opacity: 0.4; cursor: default; }
+
+/* Date bar */
+.datebar { display: flex; align-items: center; gap: 8px; }
+.datebar .label { flex: 1; text-align: center; min-width: 0; }
+.datebar .label strong { font-family: var(--f-display); font-weight: 400; font-size: 20px; display: block; }
+.datebar input[type="date"] { border: 1px solid var(--line); border-radius: 8px; padding: 2px 6px; background: var(--surface); font-size: 13px; color: var(--muted); }
+
+/* Summary */
+.kcal-head { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+.kcal-head .big { font-family: var(--f-display); font-size: 40px; line-height: 1; }
+.kcal-head .of { color: var(--muted); font-size: 15px; }
+.left-pill { margin-inline-start: auto; text-align: end; }
+.left-pill .v { font-family: var(--f-display); font-size: 24px; line-height: 1.1; }
+.meter { display: grid; gap: 6px; }
+.meter-top { display: flex; justify-content: space-between; gap: 8px; font-size: 14px; }
+.bar { height: 10px; border-radius: 999px; background: var(--surface-2); overflow: hidden; position: relative; }
+.bar > span { position: absolute; inset-block: 0; inset-inline-start: 0; border-radius: 999px; background: var(--accent); }
+.bar.thin { height: 6px; }
+.bar > span.over { background: var(--bad); }
+.split { display: flex; height: 14px; border-radius: 999px; overflow: hidden; gap: 2px; background: var(--surface); }
+.split > span { display: block; height: 100%; min-width: 2px; }
+.legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-inline-end: 6px; vertical-align: -1px; }
+.minis { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+.mini { display: grid; gap: 4px; font-size: 13px; }
+.mini .meter-top { font-size: 13px; }
+
+.chip { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.chip.good { background: color-mix(in srgb, var(--good) 15%, var(--surface)); color: var(--good-ink); }
+.chip.warn { background: color-mix(in srgb, var(--warn) 22%, var(--surface)); color: var(--warn-ink); }
+.chip.bad { background: color-mix(in srgb, var(--bad) 15%, var(--surface)); color: var(--bad-ink); }
+.chip.info { background: var(--surface-2); color: var(--ink-2); }
+
+/* Insights */
+.insights { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+.insights li { display: grid; grid-template-columns: 22px 1fr; gap: 8px; align-items: start; }
+.insights .ic { width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; font-weight: 700; }
+.ic.good { background: color-mix(in srgb, var(--good) 18%, var(--surface)); color: var(--good-ink); }
+.ic.warn { background: color-mix(in srgb, var(--warn) 25%, var(--surface)); color: var(--warn-ink); }
+.ic.bad { background: color-mix(in srgb, var(--bad) 16%, var(--surface)); color: var(--bad-ink); }
+.ic.info { background: var(--surface-2); color: var(--ink-2); }
+.insights b { font-weight: 600; }
+
+/* Meals */
+.meal-head { display: flex; align-items: center; gap: 8px; }
+.meal-head h3 { flex: 1; }
+.meal-head .tot { color: var(--muted); font-size: 14px; }
+.entries { list-style: none; margin: 8px 0 0; padding: 0; }
+.entries li { border-top: 1px solid var(--line); }
+.entry { width: 100%; display: grid; grid-template-columns: 1fr auto; gap: 2px 12px; text-align: start; background: none; border: 0; padding: 10px 2px; border-radius: 8px; }
+.entry:hover { background: var(--surface-2); }
+.entry .n { font-weight: 500; min-width: 0; overflow-wrap: anywhere; }
+.entry .a { grid-column: 1; color: var(--muted); font-size: 13px; }
+.entry .k { grid-row: 1 / span 2; grid-column: 2; text-align: end; font-size: 14px; }
+.entry .k small { display: block; color: var(--muted); font-size: 12px; }
+.empty-meal { color: var(--muted); font-size: 14px; padding: 6px 0 0; }
+.entry-row { display: flex; align-items: center; gap: 6px; }
+.entry-row .entry { flex: 1; min-width: 0; }
+.entry-actions { display: flex; gap: 4px; flex: none; }
+.icon-btn.sm { width: 32px; height: 32px; font-size: 15px; color: var(--ink-2); }
+.toast { display: flex; align-items: center; gap: 14px; }
+.toast-act { background: none; border: 0; padding: 0; color: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
+
+/* Stat tiles */
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; display: grid; gap: 4px; align-content: start; }
+.tile .t { font-size: 13px; color: var(--muted); }
+.tile .v { font-family: var(--f-display); font-size: 28px; line-height: 1.1; }
+.tile .s { font-size: 13px; color: var(--ink-2); }
+
+/* Charts */
+.chart { position: relative; }
+.chart svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chart text { fill: var(--muted); font-family: var(--f-body); font-size: 11px; }
+.chart .grid { stroke: var(--grid); stroke-width: 1; }
+.chart .base { stroke: var(--axis); stroke-width: 1; }
+.chart .target { stroke: var(--ink-2); stroke-width: 1.5; stroke-dasharray: 5 4; }
+.chart .target-label { fill: var(--ink-2); font-weight: 600; }
+.chart .hit { fill: transparent; }
+.chart .bar-k { fill: var(--accent); }
+.chart .bar-p { fill: var(--protein); }
+.chart .dim { opacity: 0.35; }
+.chart .missing { fill: var(--axis); }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 12px; padding: 6px 8px; border-radius: 8px; white-space: nowrap; transform: translate(-50%, -100%); z-index: 2; }
+.tip b { font-weight: 600; }
+
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: start; padding: 8px 6px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+th { color: var(--muted); font-weight: 500; font-size: 13px; }
+td.n, th.n { text-align: end; font-variant-numeric: tabular-nums; }
+.period-nav { display: flex; align-items: center; gap: 8px; }
+.period-nav h2 { flex: 1; text-align: center; font-size: 20px; }
+.demo-badge { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+/* Forms */
+.form { display: grid; gap: 18px; }
+.field { display: grid; gap: 6px; }
+.field > label, .field > .lbl { font-weight: 600; font-size: 14px; }
+.field .hint { font-size: 13px; color: var(--muted); }
+.field input[type="text"], .field input[type="number"], .field input[type="search"], .field select, .qty input {
+  border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; background: var(--surface); width: 100%; min-width: 0;
+}
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+.choices { display: grid; gap: 8px; }
+.choices.inline { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+.choice { position: relative; }
+.choice input { position: absolute; opacity: 0; inset: 0; margin: 0; cursor: pointer; }
+.choice span { display: block; border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: var(--surface); }
+.choice span b { display: block; font-weight: 600; }
+.choice span small { color: var(--muted); font-size: 13px; }
+.choice input:checked + span { border-color: var(--accent); background: var(--accent-soft); box-shadow: inset 0 0 0 1px var(--accent); }
+.choice input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
+.err { color: var(--bad-ink); font-size: 13px; }
+.calc { display: grid; gap: 10px; background: var(--surface-2); border-radius: var(--r); padding: 14px; }
+.calc dl { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin: 0; }
+.calc dt { font-size: 12px; color: var(--muted); }
+.calc dd { margin: 0; font-weight: 600; }
+
+/* Sheet */
+.sheet { position: fixed; inset: 0; z-index: 20; display: grid; align-items: end; justify-items: center; background: var(--scrim);
+  padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); padding-top: env(safe-area-inset-top, 0px); }
+.sheet-panel { background: var(--surface); width: 100%; max-width: 600px; max-height: 92vh; display: grid; grid-template-rows: auto 1fr; border-radius: 18px 18px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
+@media (min-width: 640px) { .sheet { align-items: center; } .sheet-panel { border-radius: 18px; max-height: 86vh; } }
+.sheet-head { display: flex; align-items: center; gap: 8px; padding: 14px 16px 10px; border-bottom: 1px solid var(--line); }
+.sheet-head h2 { flex: 1; font-size: 19px; }
+.sheet-body { overflow-y: auto; padding: 14px 16px 18px; display: grid; gap: 14px; align-content: start; min-height: 0; }
+.results { list-style: none; margin: 0; padding: 0; display: grid; }
+.results li + li { border-top: 1px solid var(--line); }
+.res { width: 100%; text-align: start; background: none; border: 0; padding: 10px 4px; display: grid; gap: 2px; border-radius: 8px; }
+.res:hover, .res:focus-visible { background: var(--surface-2); }
+.res .n { font-weight: 500; overflow-wrap: anywhere; }
+.res .d { font-size: 13px; color: var(--muted); }
+.tag { display: inline-block; font-size: 11px; font-weight: 600; padding: 0 6px; border-radius: 6px; background: var(--surface-2); color: var(--ink-2); margin-inline-end: 6px; }
+.tag.mine { background: var(--accent-soft); color: var(--accent); }
+.qty { display: grid; grid-template-columns: 44px 1fr 44px; gap: 8px; }
+.qty button { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; font-size: 20px; }
+.qty input { text-align: center; font-size: 18px; font-weight: 600; }
+.preview { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; background: var(--surface-2); border-radius: 12px; padding: 12px 6px; }
+.preview .v { font-family: var(--f-display); font-size: 22px; line-height: 1.1; }
+.preview .l { font-size: 12px; color: var(--muted); }
+.seg { display: flex; flex-wrap: wrap; gap: 6px; }
+.seg button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px; font-size: 14px; }
+.seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+/* Users */
+.user-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 3px 10px 3px 4px; font-size: 13px; color: var(--ink-2); min-width: 0; max-width: 220px; }
+.user-btn:hover { background: var(--surface-2); }
+.user-btn .nm { font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.user-btn .out { color: var(--accent); white-space: nowrap; }
+.avatar { width: 40px; height: 40px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent); font-family: var(--f-display); font-size: 18px; }
+.avatar.sm { width: 24px; height: 24px; font-size: 13px; }
+.people { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.person { width: 100%; display: grid; grid-template-columns: 40px 1fr auto; gap: 12px; align-items: center; text-align: start; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 10px 12px; }
+.person:hover { background: var(--surface-2); }
+.person .who { display: grid; min-width: 0; }
+.person .who b { font-weight: 600; overflow-wrap: anywhere; }
+.person .who small { color: var(--muted); font-size: 13px; }
+.person .go { color: var(--muted); font-size: 20px; }
+
+.toast { position: fixed; z-index: 30; left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 10px; font-size: 14px; box-shadow: var(--shadow); max-width: calc(100% - 32px); }
+.loading { text-align: center; padding: 48px 0; color: var(--muted); }
+.foot { font-size: 12px; color: var(--muted); text-align: center; }
+@media (prefers-reduced-motion: no-preference) { .bar > span { transition: width 0.3s ease; } }
+</style>
+
+<div id="app" dir="rtl" lang="he">
+  <header class="top">
+    <div class="top-inner">
+      <div class="brand" aria-label="צלחת">
+        <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="16" cy="16" r="7.5" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.55"/></svg>
+        <span>צלחת</span>
+      </div>
+      <button class="user-btn" id="user-btn" type="button" hidden><span class="avatar sm" id="user-initial" aria-hidden="true"></span><span class="nm" id="user-name"></span><span class="out">יציאה</span></button>
+      <nav class="tabs" id="tabs" aria-label="תצוגות" hidden>
+        <a href="#today" data-view="today">היום</a>
+        <a href="#week" data-view="week">שבוע</a>
+        <a href="#month" data-view="month">חודש</a>
+        <a href="#profile" data-view="profile">פרופיל</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap" id="view"><div class="loading">טוען את היומן…</div></main>
+  <div class="sheet" id="sheet" hidden>
+    <div class="sheet-panel" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+      <div class="sheet-head"><h2 id="sheet-title"></h2><button class="icon-btn" id="sheet-close" aria-label="סגירה">×</button></div>
+      <div class="sheet-body" id="sheet-body"></div>
+    </div>
+  </div>
+  <div class="toast" id="toast" role="status" hidden></div>
+</div>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------- constants ---------- */
+const KC = 'קק"ל', GR = "ג'", MG = 'מ"ג';
+const MEALS = [
+  { id: 'b', name: 'ארוחת בוקר' }, { id: 'l', name: 'צהריים' },
+  { id: 'd', name: 'ערב' }, { id: 's', name: 'נשנושים' }
+];
+const MEAL_NAME = Object.fromEntries(MEALS.map(m => [m.id, m.name]));
+// [energy multiplier, label, description, protein g/kg for this activity level]
+const ACTIVITY = [
+  [1.2, 'יושבני', 'עבודה משרדית, כמעט בלי פעילות גופנית', 1.0],
+  [1.375, 'פעיל', '1–3 אימונים בשבוע, או הרבה הליכה', 1.4],
+  [1.55, 'פעיל מאוד', '3–5 אימונים בשבוע', 1.6],
+  [1.725, 'ספורטיבי', '6–7 אימונים בשבוע', 1.8],
+  [1.9, 'אינטנסיבי', 'עבודה פיזית ואימונים כמעט כל יום', 2.0]
+];
+const GOALS = [
+  ['lose', 'ירידה במשקל', 'כחצי ק"ג בשבוע', -500],
+  ['lose_slow', 'ירידה מתונה', 'כרבע ק"ג בשבוע', -250],
+  ['maintain', 'שמירה על המשקל', 'בלי גירעון או עודף', 0],
+  ['gain', 'עלייה במשקל / בניית שריר', 'עודף קטן של כ-300 ' + KC, 300]
+];
+// Extra protein for the goal: more in a deficit (keeps muscle) and when building muscle.
+const PROTEIN_GOAL_ADD = { lose: 0.2, lose_slow: 0.1, maintain: 0, gain: 0.2 };
+const PROTEIN_MAX = 2.2, PROFILE_VERSION = 2;
+const REC = { sodium: 2000, fiber: 25, satPct: 10 };
+const NUTR = ['k', 'p', 'c', 'su', 'f', 'sf', 'fi', 'na'];
+const CAT = {
+  eggs: 'ביצים', dairy: 'חלב וגבינות', bread: 'לחם ומאפים', spreads: 'ממרחים', salads: 'סלטים',
+  cereal: 'דגני בוקר', meat: 'עוף ובשר', fish: 'דגים', sides: 'תוספות', legumes: 'קטניות', soups: 'מרקים',
+  home: 'תבשילים', street: 'אוכל רחוב', salty: 'חטיפים', nuts: 'פיצוחים', bars: 'חטיפי דגנים', sweets: 'מתוקים',
+  icecream: 'גלידות', fruits: 'פירות', veg: 'ירקות', drinks: 'משקאות', holidays: 'שבת וחגים'
+};
+const PROTEIN_CATS = new Set(['dairy', 'eggs', 'meat', 'fish', 'legumes', 'spreads']);
+// Foods eaten by the spoon: sauces, dips, spreads, oils, cream, sweeteners. Matched on the start of the name.
+const SPOON_RE = /^(רוטב|רטב|ממרח|מיונז|קטשופ|חרדל|ויניגרט|פסטו|הריסה|אריסה|סחוג|עמבה|צ'ילי|טחינה|סלט טחינה|סלט חומוס|סלט חצילים|סלט מטבוחה|מטבוחה|סלט איקרא|ציזיקי|צזיקי|מטבל|שמן|חמאה|חמאת|מרגרינה|שמנת|קצפת|לאבנה|לבנה|גבינת שמנת|דבש|סירופ|סילאן|ריבה|ריבת|ממתיק|סוכר|אבקת קקאו|רסק עגבניות|טריאקי|ברביקיו|איולי|זעתר)(?=$|[\s,(\-"'׳])/;
+const isSpoonFood = name => SPOON_RE.test(String(name).trim());
+// Put tablespoon and teaspoon first; add them (marked approximate) when Tzameret has no weight for them.
+function spoonUnits(name, units) {
+  const find = n => units.find(u => u[0] === n);
+  const tb = find('כף'), ts = find('כפית');
+  const tbG = tb ? tb[1] : ts ? Math.round(ts[1] * 3 * 10) / 10 : (/^שמן/.test(name) ? 13.5 : 15);
+  const tsG = ts ? ts[1] : Math.round(tbG / 3 * 10) / 10;
+  const rest = units.filter(u => u[0] !== 'כף' && u[0] !== 'כפית');
+  return [['כף', tbG, !tb], ['כפית', tsG, !ts], ...rest];
+}
+const DOW = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
+const LS_KEY = 'tzalachat-v1';
+const CUR_KEY = 'tzalachat-current', LOGGED_OUT = '__out__';
+
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+const nf0 = new Intl.NumberFormat('he-IL', { maximumFractionDigits: 0 });
+const nf1 = new Intl.NumberFormat('he-IL', { maximumFractionDigits: 1 });
+const f0 = v => nf0.format(Math.round(v || 0));
+const f1 = v => nf1.format(Math.round((v || 0) * 10) / 10);
+const fg = v => (v < 10 ? f1(v) : f0(v));
+const clamp = (v, a, b) => Math.min(b, Math.max(a, v));
+const uid4 = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const clone = o => JSON.parse(JSON.stringify(o));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+function h(tag, attrs, ...kids) {
+  const e = document.createElement(tag);
+  if (attrs) for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k === 'class') e.className = v;
+    else if (k === 'text') e.textContent = v;
+    else if (k.startsWith('on')) e.addEventListener(k.slice(2), v);
+    else if (k === 'style') e.setAttribute('style', v);
+    else if (k in e && typeof v !== 'string') e[k] = v;
+    else e.setAttribute(k, v === true ? '' : v);
+  }
+  for (const k of kids.flat()) if (k != null && k !== false) e.append(k instanceof Node ? k : String(k));
+  return e;
+}
+const SVGNS = 'http://www.w3.org/2000/svg';
+function s(tag, attrs, ...kids) {
+  const e = document.createElementNS(SVGNS, tag);
+  if (attrs) for (const [k, v] of Object.entries(attrs)) if (v != null) e.setAttribute(k, v);
+  for (const k of kids.flat()) if (k != null) e.append(k instanceof Node ? k : document.createTextNode(String(k)));
+  return e;
+}
+
+/* dates (local time, never UTC) */
+const ymd = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const parseYmd = str => { const [y, m, d] = str.split('-').map(Number); return new Date(y, m - 1, d); };
+const addDays = (str, n) => { const d = parseYmd(str); d.setDate(d.getDate() + n); return ymd(d); };
+const todayStr = () => ymd(new Date());
+const weekStart = str => { const d = parseYmd(str); d.setDate(d.getDate() - d.getDay()); return ymd(d); };
+const dfLong = new Intl.DateTimeFormat('he-IL', { weekday: 'long', day: 'numeric', month: 'long' });
+const dfDayMonth = new Intl.DateTimeFormat('he-IL', { day: 'numeric', month: 'long' });
+const dfShort = new Intl.DateTimeFormat('he-IL', { day: 'numeric', month: 'numeric' });
+const dfMonth = new Intl.DateTimeFormat('he-IL', { month: 'long', year: 'numeric' });
+function rangeDates(a, b) { const out = []; for (let d = a; d <= b; d = addDays(d, 1)) out.push(d); return out; }
+
+/* Hebrew search normalisation: no niqqud, final letters folded, punctuation dropped */
+const FINALS = { 'ך': 'כ', 'ם': 'מ', 'ן': 'נ', 'ף': 'פ', 'ץ': 'צ' };
+const norm = t => String(t).toLowerCase().replace(/[֑-ׇ]/g, '').replace(/[ךםןףץ]/g, c => FINALS[c])
+  .replace(/["'׳״`,.()\-–—\/+&*%:;!?]/g, ' ').replace(/\s+/g, ' ').trim();
+
+let toastTimer = 0;
+function toast(msg, actionLabel, action) {
+  const t = $('#toast');
+  t.replaceChildren(h('span', null, msg));
+  if (actionLabel) t.append(h('button', { class: 'toast-act', type: 'button', onclick: () => { t.hidden = true; clearTimeout(toastTimer); action(); } }, actionLabel));
+  t.hidden = false;
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.hidden = true; }, actionLabel ? 6000 : 2600);
+}
+
+/* ---------- state ---------- */
+const state = {
+  mode: 'loading', loaded: false, slow: false, readonly: false, dbError: null,
+  all: {}, pid: null, newUser: false,   // every user's data by user id; pid = who is using the app now
+  common: [], tz: [], tzLoaded: false, tzLoading: null, foodsError: false, commonCodes: new Set(),
+  view: 'today', date: todayStr(), weekOff: 0, monthOff: 0, demo: { week: false, month: false }
+};
+const blank = () => ({ profile: null, days: {}, custom: [] });
+// state.profile / state.days / state.custom always mean the current user's data.
+for (const k of ['profile', 'days', 'custom']) Object.defineProperty(state, k, {
+  get() {
+    if (!state.pid) return k === 'days' ? {} : k === 'custom' ? [] : null;
+    return (state.all[state.pid] || (state.all[state.pid] = blank()))[k];
+  },
+  set(v) { if (state.pid) (state.all[state.pid] || (state.all[state.pid] = blank()))[k] = v; }
+});
+
+/* ---------- users on this account ---------- */
+// The first user keeps the original document names; every later user's documents start with "p-<id>-".
+const did = base => (state.pid === 'main' ? '' : 'p-' + state.pid + '-') + base;
+function parseDocId(id) {
+  let pid = 'main', rest = id;
+  const m = /^p-([a-z0-9]+)-(.+)$/.exec(id); if (m) { pid = m[1]; rest = m[2]; }
+  if (rest === 'profile') return { pid, kind: 'profile' };
+  if (rest === 'custom') return { pid, kind: 'custom' };
+  if (rest.startsWith('day-')) return { pid, kind: 'day', date: rest.slice(4) };
+  return null;
+}
+function people() {
+  return Object.entries(state.all).filter(([, b]) => b && b.profile)
+    .map(([id, b]) => ({ id, name: b.profile.name || '', created: b.profile.created || 0, profile: b.profile, days: b.days || {} }))
+    .sort((a, b) => a.created - b.created);
+}
+const displayName = p => p.name || (p.id === 'main' ? 'המשתמש הראשי' : 'ללא שם');
+function rememberPid(v) { try { localStorage.setItem(CUR_KEY, v); } catch (e) {} }
+function pickInitialPid() {
+  let cur = null; try { cur = localStorage.getItem(CUR_KEY); } catch (e) {}
+  const ids = people().map(p => p.id);
+  if (cur === LOGGED_OUT && ids.length) return null;
+  if (cur && ids.includes(cur)) return cur;
+  if (ids.length === 1) return ids[0];
+  if (!ids.length) return 'main';
+  return null;
+}
+function enterUser(pid) {
+  closeSheet();
+  Object.assign(state, { pid, newUser: false, date: todayStr(), weekOff: 0, monthOff: 0, demo: { week: false, month: false } });
+  indexCustom(); rememberPid(pid);
+  if (location.hash !== '#today') location.hash = '#today'; else render();
+  window.scrollTo(0, 0);
+  setTimeout(migrateProfile, 0);
+}
+function startNewUser() {
+  closeSheet();
+  state.pid = people().length ? uid4().replace(/[^a-z0-9]/g, '') : 'main';
+  state.all[state.pid] = blank(); state.newUser = true;
+  render(); window.scrollTo(0, 0);
+}
+function logout() {
+  closeSheet();
+  if (state.pid && state.all[state.pid] && !state.all[state.pid].profile) delete state.all[state.pid];
+  state.pid = null; state.newUser = false; rememberPid(LOGGED_OUT);
+  render(); window.scrollTo(0, 0);
+}
+
+/* ---------- nutrition math ---------- */
+function totals(entries) {
+  const t = { k: 0, p: 0, c: 0, su: 0, f: 0, sf: 0, fi: 0, na: 0 };
+  for (const e of entries) NUTR.forEach((n, i) => { t[n] += (e.v[i] || 0) * e.g / 100; });
+  return t;
+}
+const entryKcal = e => (e.v[0] || 0) * e.g / 100;
+const entryProt = e => (e.v[1] || 0) * e.g / 100;
+
+function calc(p) {
+  const bmr = 10 * p.weight + 6.25 * p.height - 5 * p.age + (p.sex === 'm' ? 5 : -161);
+  const tdee = bmr * p.activity;
+  const goal = GOALS.find(g => g[0] === p.goal) || GOALS[2];
+  const floor = p.sex === 'm' ? 1500 : 1200;
+  let kcal = tdee + goal[3], clamped = false;
+  if (kcal < floor) { kcal = floor; clamped = true; }
+  kcal = Math.round(kcal / 50) * 50;
+  const hm = p.height / 100, bmi = p.weight / (hm * hm);
+  let refW = p.weight, adjusted = false;
+  if (bmi > 30) { const ideal = 25 * hm * hm; refW = ideal + 0.4 * (p.weight - ideal); adjusted = true; }
+  const act = ACTIVITY.find(a => a[0] === p.activity) || ACTIVITY[1];
+  const goalAdd = PROTEIN_GOAL_ADD[p.goal] || 0;
+  let perKg = Math.min(PROTEIN_MAX, act[3] + goalAdd);
+  if (p.age >= 65) perKg = Math.max(perKg, 1.2);
+  perKg = Math.round(perKg * 10) / 10;
+  const protein = Math.round(refW * perKg / 5) * 5;
+  return { bmr, tdee, kcal, clamped, bmi, perKg, actBase: act[3], actLabel: act[1], goalAdd, refW, adjusted, protein };
+}
+function bmiLabel(b) {
+  if (b < 18.5) return 'תת-משקל';
+  if (b < 25) return 'תקין';
+  if (b < 30) return 'עודף משקל';
+  return 'השמנה';
+}
+
+/* Profiles saved before the activity-based protein rule get their automatic target recalculated once. */
+const migrated = new Set();
+function migrateProfile() {
+  const p = state.profile;
+  if (!p || migrated.has(state.pid) || (p.pv || 1) >= PROFILE_VERSION || state.readonly) return;
+  migrated.add(state.pid);
+  const next = { ...p, pv: PROFILE_VERSION };
+  let msg = '';
+  if (!p.proteinManual && p.sex && p.age && p.height && p.weight) {
+    const c = calc(p);
+    if (c.protein !== p.proteinTarget) { msg = `יעד החלבון עודכן לפי רמת הפעילות: ${f0(c.protein)} ${GR}`; next.proteinTarget = c.protein; }
+  }
+  state.profile = next; persist(did('profile')); safeRender();
+  if (msg) toast(msg);
+}
+
+/* ---------- storage: private db subtree in the artifact, or this browser ---------- */
+let DB = null, UID = null;
+const writes = {};
+async function initStore() {
+  const c = window.claude;
+  if (!c || typeof c.use !== 'function') return useLocal();
+  try {
+    const [d, u] = await Promise.all([c.use('db'), c.use('user')]);
+    const id = u ? await u.id() : null;
+    if (!d || !id) return useLocal();
+    DB = d; UID = id; state.mode = 'db';
+    subscribe();
+  } catch (e) { useLocal(); }
+}
+function useLocal() {
+  state.mode = 'local';
+  try {
+    const raw = localStorage.getItem(LS_KEY);
+    if (raw) {
+      const o = JSON.parse(raw);
+      if (o.v === 2) state.all = o.all || {};
+      else if (o.profile) state.all = { main: { profile: o.profile, days: o.days || {}, custom: o.custom || [] } };
+    }
+  } catch (e) { state.localBroken = true; }
+  state.loaded = true; state.pid = pickInitialPid(); indexCustom(); route();
+  setTimeout(migrateProfile, 0);
+}
+function saveLocal() {
+  const all = {};
+  for (const [k, b] of Object.entries(state.all)) if (b && b.profile) all[k] = b;
+  try { localStorage.setItem(LS_KEY, JSON.stringify({ v: 2, all })); }
+  catch (e) { toast('לא הצלחתי לשמור בדפדפן הזה'); }
+}
+function subscribe() {
+  const timer = setTimeout(() => { if (!state.loaded) { state.slow = true; render(); } }, 10000);
+  DB.collection('data/users/' + UID).onSnapshot(snap => {
+    if (!state.loaded && snap.metadata.fromCache && snap.empty) return;   // wait for the store before choosing a user
+    const all = {};
+    for (const d of snap.docs) {
+      const data = d.data(), info = parseDocId(d.id); if (!data || !info) continue;
+      const b = all[info.pid] || (all[info.pid] = blank());
+      if (info.kind === 'profile') b.profile = clone(data);
+      else if (info.kind === 'custom') b.custom = clone(data.foods || []);
+      else b.days[info.date] = clone(data);
+    }
+    // Keep this device's unsent edits over what the store has.
+    for (const [id, w] of Object.entries(writes)) {
+      if (!(w.busy || w.dirty)) continue;
+      const info = parseDocId(id); if (!info) continue;
+      const lb = state.all[info.pid], b = all[info.pid] || (all[info.pid] = blank());
+      if (info.kind === 'profile') b.profile = lb ? lb.profile : null;
+      else if (info.kind === 'custom') b.custom = lb ? lb.custom : [];
+      else if (lb && lb.days[info.date]) b.days[info.date] = lb.days[info.date]; else delete b.days[info.date];
+    }
+    if (state.pid && state.newUser && !all[state.pid]) all[state.pid] = state.all[state.pid] || blank();
+    state.all = all;
+    const first = !state.loaded; state.loaded = true;
+    if (first) state.pid = pickInitialPid();
+    else if (state.pid && !state.newUser && !(all[state.pid] && all[state.pid].profile)) state.pid = null;   // user removed elsewhere
+    if (!snap.metadata.fromCache) { clearTimeout(timer); state.slow = false; }
+    indexCustom();
+    if (first) { route(); if (!snap.metadata.fromCache) setTimeout(migrateProfile, 0); }
+    else { safeRender(); if (!snap.metadata.fromCache) setTimeout(migrateProfile, 0); }
+  }, err => {
+    clearTimeout(timer); state.dbError = err && err.code; state.loaded = true; render();
+  });
+}
+function persist(docId) {
+  if (state.mode === 'local') return saveLocal();
+  if (state.mode !== 'db' || state.readonly) return;
+  const w = writes[docId] || (writes[docId] = { busy: false, dirty: false, tries: 0 });
+  w.dirty = true;
+  if (!w.busy) flush(docId);
+}
+function bodyFor(docId) {
+  const info = parseDocId(docId), b = info && state.all[info.pid];
+  if (!b || !b.profile) return null;   // a removed user: every document of theirs is deleted
+  if (info.kind === 'profile') return b.profile;
+  if (info.kind === 'custom') return { foods: b.custom.map(({ id, name, v, serv }) => ({ id, name, v, serv: serv || null })) };
+  const day = b.days[info.date];
+  return day && day.entries.length ? day : null;
+}
+async function flush(docId) {
+  const w = writes[docId]; w.busy = true;
+  while (w.dirty) {
+    w.dirty = false;
+    const body = bodyFor(docId);
+    const ref = DB.doc('data/users/' + UID + '/' + docId);
+    try {
+      if (body) await ref.set(clone(body)); else await ref.delete();
+      w.tries = 0;
+    } catch (e) {
+      const code = e && e.code;
+      if (code === 'invalid_argument') { state.readonly = true; toast('אין הרשאה לשמור כאן'); render(); }
+      else if (code === 'unavailable' && w.tries < 2) { w.tries++; w.dirty = true; await sleep(700 + Math.random() * 900); }
+      else if (code === 'quota_exceeded') toast('אין מקום לשמור עוד נתונים');
+      else toast('השמירה לא הצליחה. נסו שוב בעוד רגע.');
+    }
+  }
+  w.busy = false;
+}
+
+/* ---------- food data ---------- */
+async function loadFoods() {
+  try {
+    const r = await fetch('foods.json'); if (!r.ok) throw new Error(r.status);
+    const arr = await r.json();
+    state.common = arr.map((f, i) => {
+      const spoon = isSpoonFood(f.n);
+      return { key: 'c' + i, src: f.src === 'est' ? 'est' : 'common', name: f.n, serv: { label: f.s, g: f.g }, cat: f.cat, spoon,
+        v: f.v, units: spoon ? spoonUnits(f.n, f.u || []) : (f.u || []), code: f.code, q: norm(f.n + ' ' + (CAT[f.cat] || '')) };
+    });
+    state.commonCodes = new Set(arr.filter(f => f.src === 'tz').map(f => f.code));
+  } catch (e) { state.foodsError = true; }
+}
+function loadTz() {
+  if (state.tzLoading) return state.tzLoading;
+  state.tzLoading = fetch('tzameret.json').then(r => r.json()).then(arr => {
+    state.tz = arr.filter(x => !state.commonCodes.has(x[0]))
+      .map(x => {
+        const spoon = isSpoonFood(x[1]);
+        return { key: 't' + x[0], src: 'tz', name: x[1], v: x[2], spoon, units: spoon ? spoonUnits(x[1], x[3] || []) : (x[3] || []), code: x[0], q: norm(x[1]) };
+      });
+    state.tzLoaded = true;
+    if (!$('#sheet').hidden && sheet.step === 'search') renderResults();
+  }).catch(() => { state.tzLoading = null; });
+  return state.tzLoading;
+}
+let customIndex = [];
+function indexCustom() {
+  customIndex = state.custom.map(f => {
+    const spoon = isSpoonFood(f.name);
+    return { ...f, key: 'u' + f.id, src: 'custom', spoon, units: spoon ? spoonUnits(f.name, []) : [], q: norm(f.name) };
+  });
+}
+function searchFoods(q) {
+  const nq = norm(q); if (!nq) return [];
+  const toks = nq.split(' ');
+  const out = [];
+  const consider = (f, base) => {
+    for (const t of toks) if (!f.q.includes(t)) return;
+    let sc = base;
+    if (f.q.startsWith(toks[0])) sc += 30; else if (f.q.includes(' ' + toks[0])) sc += 15;
+    sc -= f.name.length * 0.15;
+    out.push([sc, f]);
+  };
+  customIndex.forEach(f => consider(f, 130));
+  state.common.forEach(f => consider(f, 100));
+  state.tz.forEach(f => consider(f, 0));
+  out.sort((a, b) => b[0] - a[0]);
+  return out.slice(0, 60).map(x => x[1]);
+}
+function recentFoods() {
+  const dates = Object.keys(state.days).sort().reverse().slice(0, 45);
+  const seen = new Set(), out = [];
+  for (const d of dates) for (const e of [...state.days[d].entries].reverse()) {
+    const k = e.name + '|' + e.unit.l + '|' + e.qty;
+    if (seen.has(k)) continue; seen.add(k); out.push(e);
+    if (out.length >= 14) return out;
+  }
+  return out;
+}
+function findFoodFor(entry) {
+  if (entry.src === 'custom') return customIndex.find(f => f.id === entry.code) || null;
+  if (entry.code) {
+    const c = state.common.find(f => f.code === entry.code && f.name === entry.name) || state.common.find(f => f.code === entry.code);
+    if (c) return c;
+    return state.tz.find(f => f.code === entry.code) || null;
+  }
+  return state.common.find(f => f.name === entry.name) || null;
+}
+
+/* ---------- day data ---------- */
+function getDay(date) { return state.days[date] || { date, entries: [] }; }
+function setDay(date, entries) {
+  if (entries.length) state.days[date] = { date, entries }; else delete state.days[date];
+  persist(did('day-' + date));
+}
+
+/* ---------- routing ---------- */
+function route() {
+  const v = (location.hash || '').slice(1);
+  const next = ['today', 'week', 'month', 'profile'].includes(v) ? v : 'today';
+  const changed = next !== state.view;
+  state.view = next;
+  render();
+  if (changed) window.scrollTo(0, 0);
+}
+window.addEventListener('hashchange', route);
+
+/* ---------- render ---------- */
+function render() {
+  const view = $('#view');
+  const tabs = $('#tabs');
+  if (!state.loaded) {
+    view.replaceChildren(h('div', { class: 'loading' }, state.slow ? 'היומן לא נטען עדיין. בודק שוב ברקע…' : 'טוען את היומן…'));
+    tabs.hidden = true; return;
+  }
+  const ub = $('#user-btn');
+  if (!state.pid || !state.profile) {
+    tabs.hidden = true; ub.hidden = true;
+    view.replaceChildren(...(state.pid ? renderProfile(true) : renderChooser()));
+    return;
+  }
+  tabs.hidden = false; ub.hidden = false;
+  const me = displayName({ id: state.pid, name: state.profile.name });
+  $('#user-name').textContent = me; $('#user-initial').textContent = me.charAt(0);
+  ub.setAttribute('aria-label', 'יציאה מהמשתמש ' + me);
+  for (const a of tabs.querySelectorAll('a')) {
+    if (a.dataset.view === state.view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+  }
+  const kids = [];
+  if (state.dbError) kids.push(h('div', { class: 'notice bad' }, 'אין גישה לנתונים השמורים כרגע. רעננו את הדף מאוחר יותר.'));
+  if (state.readonly) kids.push(h('div', { class: 'notice warn' }, 'בתצוגה הזו אי אפשר לשמור שינויים.'));
+  if (state.slow) kids.push(h('div', { class: 'notice warn' }, 'ייתכן שהנתונים אינם מעודכנים. ממתין לחיבור…'));
+  if (state.view === 'today') kids.push(...renderToday());
+  else if (state.view === 'week') kids.push(...renderPeriod('week'));
+  else if (state.view === 'month') kids.push(...renderPeriod('month'));
+  else kids.push(...renderProfile(false));
+  kids.push(h('p', { class: 'foot' }, storageNote(), ' · ערכים תזונתיים: מאגר "צמרת", משרד הבריאות'));
+  view.replaceChildren(...kids);
+}
+/* ---------- USERS: who is using the app ---------- */
+function renderChooser() {
+  const list = people();
+  return [h('section', { class: 'card stack' },
+    h('h2', null, list.length ? 'מי משתמש עכשיו?' : 'ברוכים הבאים לצלחת'),
+    list.length ? h('ul', { class: 'people' }, list.map(p => {
+      const days = Object.keys(p.days).sort(), last = days[days.length - 1];
+      const lastTxt = last ? ' · נרשם לאחרונה ' + (last === todayStr() ? 'היום' : dfShort.format(parseYmd(last))) : '';
+      return h('li', null, h('button', { class: 'person', onclick: () => enterUser(p.id) },
+        h('span', { class: 'avatar', 'aria-hidden': 'true' }, displayName(p).charAt(0)),
+        h('span', { class: 'who' }, h('b', null, displayName(p)),
+          h('small', { class: 'num' }, `יעד ${f0(p.profile.kcalTarget)} ${KC} · ${f0(p.profile.proteinTarget)} ${GR} חלבון${lastTxt}`)),
+        h('span', { class: 'go', 'aria-hidden': 'true' }, '‹')));
+    })) : h('p', { style: 'margin:0' }, 'אין עדיין משתמשים. מוסיפים משתמש, ממלאים כמה פרטים, ומתחילים לרשום.'),
+    h('button', { class: 'btn primary big', onclick: startNewUser }, '+ משתמש חדש'),
+    h('p', { class: 'muted small', style: 'margin:0' }, state.mode === 'db'
+      ? 'המשתמשים נשמרים בחשבון Claude שלך, ולכל אחד יש פרופיל, יעדים ויומן משלו. אין סיסמה: מי שפותח את האפליקציה בחשבון הזה יכול לעבור ביניהם. מי שיש לו חשבון Claude משלו יכול לקבל את הקישור ולהשתמש בה מהחשבון שלו.'
+      : 'המשתמשים נשמרים בדפדפן הזה, ולכל אחד יש פרופיל, יעדים ויומן משלו. אין סיסמה, וכל מי שמשתמש בדפדפן הזה יכול לעבור ביניהם.'))];
+}
+
+/* Re-render for background updates, but never under someone typing in a form. */
+function safeRender() {
+  const v = $('#view');
+  if (v.querySelector('form') && v.contains(document.activeElement)) return;
+  render();
+}
+function storageNote() {
+  if (state.mode === 'db') return 'נשמר בחשבון שלך, פרטי לך בלבד';
+  if (state.localBroken) return 'הדפדפן הזה לא מאפשר שמירה';
+  return 'נשמר בדפדפן הזה בלבד';
+}
+
+/* ---------- TODAY ---------- */
+function renderToday() {
+  const p = state.profile, date = state.date, day = getDay(date), t = totals(day.entries);
+  const isToday = date === todayStr();
+  const out = [];
+
+  const dateInput = h('input', { type: 'date', id: 'day-picker', value: date, max: todayStr(), 'aria-label': 'בחירת תאריך',
+    onchange: e => { if (e.target.value) { state.date = e.target.value; render(); } } });
+  out.push(h('div', { class: 'datebar' },
+    h('button', { class: 'icon-btn', 'aria-label': 'יום קודם', onclick: () => { state.date = addDays(date, -1); render(); } }, '›'),
+    h('div', { class: 'label' }, h('strong', null, isToday ? 'היום' : dfLong.format(parseYmd(date))),
+      h('div', { class: 'row', style: 'justify-content:center;gap:6px' },
+        isToday ? h('span', { class: 'muted small' }, dfLong.format(parseYmd(date))) : h('button', { class: 'btn ghost small', onclick: () => { state.date = todayStr(); render(); } }, 'חזרה להיום'),
+        dateInput)),
+    h('button', { class: 'icon-btn', 'aria-label': 'יום הבא', disabled: isToday, onclick: () => { state.date = addDays(date, 1); render(); } }, '‹')
+  ));
+
+  // summary
+  const left = p.kcalTarget - t.k;
+  const kcalPct = clamp(t.k / p.kcalTarget * 100, 0, 100);
+  const protPct = clamp(t.p / p.proteinTarget * 100, 0, 100);
+  const energy = t.p * 4 + t.c * 4 + t.f * 9;
+  const summary = h('section', { class: 'card stack', 'aria-label': 'סיכום יומי' },
+    h('div', { class: 'kcal-head' },
+      h('div', null, h('div', { class: 'muted small' }, isToday ? 'קלוריות עד עכשיו' : 'קלוריות ביום הזה'),
+        h('div', null, h('span', { class: 'big num' }, f0(t.k)), ' ', h('span', { class: 'of num' }, '/ ' + f0(p.kcalTarget) + ' ' + KC))),
+      h('div', { class: 'left-pill' },
+        h('div', { class: 'muted small' }, left >= 0 ? 'נשארו' : 'מעל היעד'),
+        h('div', { class: 'v num', style: left < 0 ? 'color:var(--bad-ink)' : '' }, f0(Math.abs(left)) + ' ' + KC))),
+    h('div', { class: 'bar', role: 'img', 'aria-label': 'התקדמות קלוריות ' + f0(kcalPct) + ' אחוז' },
+      h('span', { class: left < 0 ? 'over' : '', style: 'width:' + kcalPct + '%' })),
+    h('div', { class: 'meter' },
+      h('div', { class: 'meter-top' }, h('b', null, 'חלבון'),
+        h('span', { class: 'num' }, f0(t.p) + ' / ' + f0(p.proteinTarget) + ' ' + GR,
+          t.p >= p.proteinTarget ? h('span', { class: 'chip good', style: 'margin-inline-start:6px' }, '✓ הושג') : null)),
+      h('div', { class: 'bar', role: 'img', 'aria-label': 'התקדמות חלבון ' + f0(protPct) + ' אחוז' },
+        h('span', { style: 'width:' + protPct + '%;background:var(--protein)' }))),
+    energy > 0 ? macroSplit(t) : null,
+    h('div', { class: 'minis' },
+      miniMeter('סיבים תזונתיים', t.fi, REC.fiber, GR, 'goal'),
+      miniMeter('נתרן', t.na, REC.sodium, MG, 'cap'),
+      miniMeter('שומן רווי', t.sf, p.kcalTarget * REC.satPct / 100 / 9, GR, 'cap'),
+      miniMeter('סוכרים', t.su, null, GR, 'info'))
+  );
+  out.push(summary);
+
+  const ins = todayInsights(t, day, isToday);
+  if (ins.length) out.push(h('section', { class: 'card stack', 'aria-label': 'ניתוח יומי' },
+    h('h2', null, isToday ? 'ניתוח עד עכשיו' : 'ניתוח היום'), insightList(ins)));
+
+  // meals
+  const yest = getDay(addDays(date, -1));
+  for (const m of MEALS) {
+    const list = day.entries.filter(e => e.meal === m.id);
+    const mk = list.reduce((s, e) => s + entryKcal(e), 0);
+    const yList = yest.entries.filter(e => e.meal === m.id);
+    const card = h('section', { class: 'card', 'aria-label': m.name },
+      h('div', { class: 'meal-head' }, h('h3', null, m.name),
+        list.length ? h('span', { class: 'tot num' }, f0(mk) + ' ' + KC) : null,
+        state.readonly ? null : h('button', { class: 'btn primary', onclick: () => openAdd(m.id) }, '+ הוספה')));
+    if (list.length) {
+      card.append(h('ul', { class: 'entries' }, list.map(e => h('li', { class: 'entry-row' },
+        h('button', { class: 'entry', onclick: () => openEdit(e.id), 'aria-label': 'עריכת ' + e.name },
+          h('span', { class: 'n' }, e.name), h('span', { class: 'a' }, amountText(e)),
+          h('span', { class: 'k num' }, f0(entryKcal(e)) + ' ' + KC, h('small', null, f1(entryProt(e)) + ' ' + GR + ' חלבון'))),
+        state.readonly ? null : h('div', { class: 'entry-actions' },
+          h('button', { class: 'icon-btn sm', type: 'button', title: 'עריכה', 'aria-label': 'עריכת ' + e.name, onclick: () => openEdit(e.id) }, '✎'),
+          h('button', { class: 'icon-btn sm', type: 'button', title: 'הסרה', 'aria-label': 'הסרת ' + e.name, onclick: () => removeEntry(date, e.id) }, '✕'))))));
+    } else {
+      const empty = h('div', { class: 'empty-meal row' }, h('span', null, 'עדיין לא נרשם כלום.'));
+      if (yList.length && !state.readonly) empty.append(h('button', { class: 'btn ghost small', onclick: () => {
+        const entries = getDay(date).entries.concat(yList.map(e => ({ ...clone(e), id: uid4(), t: Date.now() })));
+        setDay(date, entries); render(); toast('הועתקו ' + yList.length + ' פריטים מאתמול');
+      } }, 'להעתיק מאתמול (' + yList.length + ')'));
+      card.append(empty);
+    }
+    out.push(card);
+  }
+  return out;
+}
+function removeEntry(date, id) {
+  const before = getDay(date).entries, e = before.find(x => x.id === id);
+  if (!e) return;
+  setDay(date, before.filter(x => x.id !== id)); render();
+  toast(e.name + ' הוסר', 'ביטול', () => { setDay(date, before); render(); });
+}
+function macroSplit(t) {
+  const pe = t.p * 4, ce = t.c * 4, fe = t.f * 9, tot = pe + ce + fe || 1;
+  const pct = x => Math.round(x / tot * 100);
+  return h('div', { class: 'stack', style: 'gap:6px' },
+    h('div', { class: 'split', role: 'img', 'aria-label': `חלוקת אנרגיה: חלבון ${pct(pe)}%, פחמימות ${pct(ce)}%, שומן ${pct(fe)}%` },
+      h('span', { style: `width:${pe / tot * 100}%;background:var(--protein)` }),
+      h('span', { style: `width:${ce / tot * 100}%;background:var(--carb)` }),
+      h('span', { style: `width:${fe / tot * 100}%;background:var(--fat)` })),
+    h('div', { class: 'legend' },
+      h('span', null, h('i', { style: 'background:var(--protein)' }), `חלבון ${pct(pe)}% (${f0(t.p)} ${GR})`),
+      h('span', null, h('i', { style: 'background:var(--carb)' }), `פחמימות ${pct(ce)}% (${f0(t.c)} ${GR})`),
+      h('span', null, h('i', { style: 'background:var(--fat)' }), `שומן ${pct(fe)}% (${f0(t.f)} ${GR})`)));
+}
+function miniMeter(label, val, ref, unit, kind) {
+  let chip = null, pct = 0, color = 'var(--muted)';
+  if (ref) {
+    pct = clamp(val / ref * 100, 0, 100);
+    if (kind === 'cap') {
+      if (val > ref) { chip = h('span', { class: 'chip bad' }, '! מעל'); color = 'var(--bad)'; }
+      else { color = val > ref * 0.8 ? 'var(--warn)' : 'var(--axis)'; }
+    } else { color = val >= ref ? 'var(--good)' : 'var(--axis)'; if (val >= ref) chip = h('span', { class: 'chip good' }, '✓'); }
+  }
+  return h('div', { class: 'mini' },
+    h('div', { class: 'meter-top' }, h('span', null, label, ' ', chip),
+      h('span', { class: 'num muted' }, fg(val) + (ref ? ' / ' + f0(ref) : '') + ' ' + unit)),
+    ref ? h('div', { class: 'bar thin' }, h('span', { style: `width:${pct}%;background:${color}` }))
+        : h('div', { class: 'muted', style: 'font-size:12px' }, 'כולל סוכר טבעי מפירות וחלב'));
+}
+function todayInsights(t, day, isToday) {
+  const p = state.profile, out = [];
+  if (!day.entries.length) {
+    out.push({ lvl: 'info', html: [isToday ? 'עוד לא נרשם כלום היום. ' : 'לא נרשם כלום ביום הזה. ', 'הוסיפו מאכל לאחת הארוחות למטה.'] });
+    return out;
+  }
+  const left = p.kcalTarget - t.k, protLeft = p.proteinTarget - t.p;
+  if (left < 0) out.push({ lvl: left < -p.kcalTarget * 0.1 ? 'bad' : 'warn', html: ['עברת את יעד הקלוריות ב-', h('b', null, f0(-left) + ' ' + KC), '.'] });
+  if (protLeft <= 0) out.push({ lvl: 'good', html: ['הגעת ליעד החלבון (', h('b', null, f0(t.p) + ' ' + GR), ').'] });
+  else if (isToday && left > 80) {
+    const sug = proteinSuggestions(protLeft, left);
+    const parts = ['חסרים ', h('b', null, f0(protLeft) + ' ' + GR + ' חלבון'), ' ונשארו ', h('b', null, f0(left) + ' ' + KC), '.'];
+    if (sug.length) parts.push(' רעיונות שנכנסים בתקציב:', h('br'), ...sug.flatMap((f, i) => [i ? h('br') : '', h('b', null, f.name), `, ${f.serv.label}: ${f0(f.v[1] * f.serv.g / 100)} ${GR} חלבון, ${f0(f.v[0] * f.serv.g / 100)} ${KC}`]));
+    out.push({ lvl: 'info', html: parts });
+  } else if (!isToday) out.push({ lvl: 'warn', html: ['חסרו ', h('b', null, f0(protLeft) + ' ' + GR + ' חלבון'), ' ליעד.'] });
+  if (t.na > REC.sodium) out.push({ lvl: 'bad', html: ['הנתרן כבר ', h('b', null, f0(t.na) + ' ' + MG), ', מעל ההמלצה של 2,000 ' + MG + ' ליום. מוצרים מלוחים, גבינות מלוחות, לחם ורטבים הם המקורות הנפוצים.'] });
+  const satMax = p.kcalTarget * REC.satPct / 100 / 9;
+  if (t.sf > satMax) out.push({ lvl: 'warn', html: ['השומן הרווי (', h('b', null, f0(t.sf) + ' ' + GR), ') מעל 10% מהיעד הקלורי.'] });
+  const hour = new Date().getHours();
+  if ((!isToday || hour >= 19) && t.fi < 15 && t.k > p.kcalTarget * 0.5) out.push({ lvl: 'warn', html: ['מעט סיבים: ', h('b', null, f0(t.fi) + ' ' + GR), ' מתוך 25 מומלצים. ירקות, פירות, קטניות ולחם מלא יעזרו.'] });
+  const top = [...day.entries].sort((a, b) => entryKcal(b) - entryKcal(a))[0];
+  if (top && day.entries.length >= 3 && entryKcal(top) > t.k * 0.3) out.push({ lvl: 'info', html: [h('b', null, top.name), ` נתן ${Math.round(entryKcal(top) / t.k * 100)}% מהקלוריות של היום.`] });
+  return out;
+}
+function proteinSuggestions(protLeft, kcalLeft) {
+  const cands = state.common.filter(f => f.src === 'common' && PROTEIN_CATS.has(f.cat) && f.v[0] > 0 && f.v[1] != null)
+    .map(f => ({ f, p: f.v[1] * f.serv.g / 100, k: f.v[0] * f.serv.g / 100 }))
+    .filter(x => x.p >= 8 && x.k <= kcalLeft && x.k > 0)
+    .sort((a, b) => b.p / b.k - a.p / a.k);
+  const used = new Set(), pick = [];
+  for (const x of cands) { if (used.has(x.f.cat)) continue; used.add(x.f.cat); pick.push(x.f); if (pick.length === 3) break; }
+  return pick;
+}
+function insightList(items) {
+  const icon = { good: '✓', warn: '!', bad: '!', info: 'i' };
+  return h('ul', { class: 'insights' }, items.map(it => h('li', null,
+    h('span', { class: 'ic ' + it.lvl, 'aria-hidden': 'true' }, icon[it.lvl]),
+    h('span', null, ...it.html))));
+}
+function amountText(e) {
+  if (e.unit.kind === 'gram') return fg(e.g) + ' ' + GR;
+  return (e.qty === 1 ? '' : f1(e.qty) + ' × ') + e.unit.l;
+}
+
+/* ---------- WEEK / MONTH ---------- */
+function periodRange(kind) {
+  const t = todayStr();
+  if (kind === 'week') {
+    const start = addDays(weekStart(t), state.weekOff * 7);
+    return { start, end: addDays(start, 6), title: `${dfDayMonth.format(parseYmd(start))} – ${dfDayMonth.format(parseYmd(addDays(start, 6)))}` };
+  }
+  const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + state.monthOff);
+  const start = ymd(d); const e = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  return { start, end: ymd(e), title: dfMonth.format(d) };
+}
+function analyze(dates, daysMap) {
+  const today = todayStr();
+  const rows = dates.map(date => {
+    const entries = (daysMap[date] && daysMap[date].entries) || [];
+    const meals = { b: 0, l: 0, d: 0, s: 0 };
+    entries.forEach(e => { meals[e.meal] = (meals[e.meal] || 0) + entryKcal(e); });
+    return { date, future: date > today, partial: date === today, logged: entries.length > 0, t: totals(entries), meals, entries };
+  });
+  // Today is still in progress, so it stays out of averages and counts.
+  const L = rows.filter(r => r.logged && !r.partial), n = L.length;
+  const avg = {}; NUTR.forEach(k => { avg[k] = n ? L.reduce((s, r) => s + r.t[k], 0) / n : 0; });
+  const mealAvg = {}; MEALS.forEach(m => { mealAvg[m.id] = n ? L.reduce((s, r) => s + r.meals[m.id], 0) / n : 0; });
+  const foods = {};
+  L.forEach(r => r.entries.forEach(e => {
+    const f = foods[e.name] || (foods[e.name] = { name: e.name, times: 0, k: 0, p: 0 });
+    f.times++; f.k += entryKcal(e); f.p += entryProt(e);
+  }));
+  const totalK = L.reduce((s, r) => s + r.t.k, 0);
+  return { rows, logged: L, n, avg, mealAvg, foods: Object.values(foods), totalK, elapsed: rows.filter(r => !r.future && !r.partial).length,
+    todayLogged: rows.some(r => r.partial && r.logged) };
+}
+function periodInsights(an, p) {
+  const out = [], n = an.n, a = an.avg;
+  if (!n) return out;
+  if (n < Math.min(4, an.elapsed)) out.push({ lvl: 'info', html: [`תועדו רק ${n} ימים, אז התמונה חלקית. ימים בלי רישום לא נכנסים לממוצעים.`] });
+  const kDiff = a.k - p.kcalTarget, kRel = kDiff / p.kcalTarget;
+  if (Math.abs(kRel) <= 0.07) out.push({ lvl: 'good', html: ['הממוצע היומי, ', h('b', null, f0(a.k) + ' ' + KC), ', קרוב ליעד שלך (' + f0(p.kcalTarget) + ').'] });
+  else if (kRel > 0) out.push({ lvl: kRel > 0.15 ? 'bad' : 'warn', html: ['בממוצע אכלת ', h('b', null, f0(kDiff) + ' ' + KC + ' ליום מעל היעד'), ` (${f0(a.k)} מול ${f0(p.kcalTarget)}).`] });
+  else out.push({ lvl: kRel < -0.2 ? 'warn' : 'info', html: ['בממוצע אכלת ', h('b', null, f0(-kDiff) + ' ' + KC + ' ליום מתחת ליעד'), kRel < -0.2 ? '. כדאי לבדוק שאתה אוכל מספיק, או שלא נשכחו ארוחות ברישום.' : '.'] });
+  const protHit = an.logged.filter(r => r.t.p >= p.proteinTarget * 0.9).length;
+  if (a.p >= p.proteinTarget * 0.9) out.push({ lvl: 'good', html: ['חלבון: ממוצע של ', h('b', null, f0(a.p) + ' ' + GR), ` ליום. היעד הושג (או כמעט) ב-${protHit} מתוך ${n} ימים.`] });
+  else out.push({ lvl: 'warn', html: ['חסרים בממוצע ', h('b', null, f0(p.proteinTarget - a.p) + ' ' + GR + ' חלבון ליום'), ` (${f0(a.p)} מתוך ${f0(p.proteinTarget)}). היעד הושג ב-${protHit} מתוך ${n} ימים.`] });
+  // weekend (Fri-Sat) vs weekdays
+  const wk = an.logged.filter(r => parseYmd(r.date).getDay() >= 5), wd = an.logged.filter(r => parseYmd(r.date).getDay() < 5);
+  if (wk.length && wd.length) {
+    const ak = wk.reduce((s, r) => s + r.t.k, 0) / wk.length, dk = wd.reduce((s, r) => s + r.t.k, 0) / wd.length;
+    if (Math.abs(ak - dk) >= 250 && Math.abs(ak - dk) / dk >= 0.15)
+      out.push({ lvl: 'info', html: ['בשישי-שבת אכלת בממוצע ', h('b', null, f0(Math.abs(ak - dk)) + ' ' + KC + (ak > dk ? ' יותר' : ' פחות')), ' מאשר באמצע השבוע.'] });
+  }
+  if (a.na > 2300) out.push({ lvl: 'bad', html: ['נתרן גבוה: ', h('b', null, f0(a.na) + ' ' + MG), ' ליום בממוצע, מול המלצה של עד 2,000.'] });
+  else if (a.na > REC.sodium) out.push({ lvl: 'warn', html: ['הנתרן מעט מעל ההמלצה: ', h('b', null, f0(a.na) + ' ' + MG), ' ליום בממוצע.'] });
+  if (a.fi < 18) out.push({ lvl: 'warn', html: ['מעט סיבים: ', h('b', null, f0(a.fi) + ' ' + GR), ' ליום בממוצע. ההמלצה היא לפחות 25.'] });
+  else if (a.fi >= REC.fiber) out.push({ lvl: 'good', html: ['סיבים: ', h('b', null, f0(a.fi) + ' ' + GR), ' ליום בממוצע, בטווח המומלץ.'] });
+  const energy = a.p * 4 + a.c * 4 + a.f * 9;
+  if (energy > 0) {
+    const satPct = a.sf * 9 / energy * 100, fatPct = a.f * 9 / energy * 100;
+    if (satPct > 12) out.push({ lvl: 'warn', html: ['שומן רווי: ', h('b', null, f0(satPct) + '%'), ' מהאנרגיה, מעל ההמלצה של עד 10%.'] });
+    if (fatPct > 38) out.push({ lvl: 'info', html: ['השומן מספק ', h('b', null, f0(fatPct) + '%'), ' מהאנרגיה, מעל הטווח המקובל (20%–35%).'] });
+    const sugPct = a.su * 4 / energy * 100;
+    if (sugPct > 22) out.push({ lvl: 'warn', html: ['הרבה סוכר: ', h('b', null, f0(a.su) + ' ' + GR), ` ליום (${f0(sugPct)}% מהאנרגיה, כולל סוכר טבעי).`] });
+  }
+  if (a.k > 0 && an.mealAvg.s / a.k > 0.3) out.push({ lvl: 'info', html: ['נשנושים מספקים ', h('b', null, f0(an.mealAvg.s / a.k * 100) + '%'), ' מהקלוריות היומיות.'] });
+  if (n >= 4) {
+    const sd = Math.sqrt(an.logged.reduce((s, r) => s + (r.t.k - a.k) ** 2, 0) / n);
+    if (sd / a.k > 0.3) out.push({ lvl: 'info', html: ['הצריכה משתנה מאוד בין הימים: סטיית תקן של ', h('b', null, f0(sd) + ' ' + KC), '.'] });
+  }
+  return out;
+}
+function renderPeriod(kind) {
+  const p = state.profile, rg = periodRange(kind);
+  const off = kind === 'week' ? 'weekOff' : 'monthOff';
+  const dates = rangeDates(rg.start, rg.end);
+  const isDemo = state.demo[kind];
+  const an = analyze(dates, isDemo ? demoDays(dates) : state.days);
+  const out = [];
+  out.push(h('div', { class: 'period-nav' },
+    h('button', { class: 'icon-btn', 'aria-label': kind === 'week' ? 'שבוע קודם' : 'חודש קודם', onclick: () => { state[off]--; state.demo[kind] = false; render(); } }, '›'),
+    h('h2', null, (kind === 'week' ? 'שבוע ' : '') + rg.title),
+    h('button', { class: 'icon-btn', 'aria-label': kind === 'week' ? 'שבוע הבא' : 'חודש הבא', disabled: state[off] >= 0, onclick: () => { state[off]++; state.demo[kind] = false; render(); } }, '‹')));
+  if (isDemo) out.push(h('div', { class: 'notice warn demo-badge' }, h('b', null, 'דוגמה:'), ' נתונים מומצאים כדי להראות איך הניתוח נראה. הם לא נשמרים ולא שלך.',
+    h('span', { class: 'spacer' }), h('button', { class: 'btn', onclick: () => { state.demo[kind] = false; render(); } }, 'הסתרת הדוגמה')));
+  if (!an.n) {
+    out.push(h('section', { class: 'card stack' }, h('h3', null, an.todayLogged ? 'הניתוח יתחיל אחרי היום הראשון' : kind === 'week' ? 'אין רישומים בשבוע הזה' : 'אין רישומים בחודש הזה'),
+      h('p', { class: 'muted', style: 'margin:0' }, an.todayLogged
+        ? 'היום עוד לא נגמר, ולכן הוא לא נכנס לממוצעים. את הניתוח של היום אפשר לראות בכל רגע במסך "היום". מחר יופיעו כאן ממוצעים, גרפים ותובנות.'
+        : 'הניתוח מתמלא מהמאכלים שרושמים במסך "היום". אחרי כמה ימים של רישום יופיעו כאן ממוצעים, גרפים ותובנות.'),
+      h('div', { class: 'row' }, h('a', { class: 'btn primary', href: '#today', style: 'text-decoration:none' }, 'לרישום היום'),
+        h('button', { class: 'btn', onclick: () => { state.demo[kind] = true; render(); } }, 'להציג דוגמה של ניתוח'))));
+    return out;
+  }
+  const a = an.avg;
+  const onK = an.logged.filter(r => Math.abs(r.t.k - p.kcalTarget) <= p.kcalTarget * 0.1).length;
+  const protHit = an.logged.filter(r => r.t.p >= p.proteinTarget * 0.9).length;
+  const kRel = (a.k - p.kcalTarget) / p.kcalTarget;
+  out.push(h('div', { class: 'tiles' },
+    tile('ממוצע קלוריות ליום', f0(a.k), 'יעד ' + f0(p.kcalTarget),
+      Math.abs(kRel) <= 0.07 ? ['good', '✓ ביעד'] : kRel > 0 ? [kRel > 0.15 ? 'bad' : 'warn', '! ' + f0(a.k - p.kcalTarget) + ' מעל'] : ['info', f0(p.kcalTarget - a.k) + ' מתחת']),
+    tile('ממוצע חלבון ליום', f0(a.p) + ' ' + GR, 'יעד ' + f0(p.proteinTarget) + ' ' + GR,
+      a.p >= p.proteinTarget * 0.9 ? ['good', '✓ ביעד'] : ['warn', '! חסר ' + f0(p.proteinTarget - a.p)]),
+    tile('ימים ביעד הקלורי', `${onK}/${an.n}`, 'בטווח של ±10%', null),
+    tile('ימים עם מספיק חלבון', `${protHit}/${an.n}`, '90% מהיעד ומעלה', null)));
+  out.splice(isDemo ? 2 : 1, 0, h('p', { class: 'muted small', style: 'margin:-8px 0 0;text-align:center' },
+    `תועדו ${an.n} מתוך ${an.elapsed} ימים שהסתיימו` + (an.todayLogged ? '. היום לא נכלל כי הוא עוד לא נגמר.' : '.')));
+  const ins = periodInsights(an, p);
+  if (ins.length) out.push(h('section', { class: 'card stack' }, h('h2', null, 'מה עולה מהנתונים'), insightList(ins)));
+  out.push(h('section', { class: 'card stack' }, h('h3', null, 'קלוריות ליום'),
+    barChart(an.rows, r => r.t.k, p.kcalTarget, 'bar-k', KC, kind),
+    h('p', { class: 'muted small', style: 'margin:0' }, 'הקו המקווקו הוא היעד. ימים בלי רישום מסומנים בנקודה, והיום מופיע בצבע בהיר כי הוא עוד לא נגמר.')));
+  out.push(h('section', { class: 'card stack' }, h('h3', null, 'חלבון ליום'),
+    barChart(an.rows, r => r.t.p, p.proteinTarget, 'bar-p', GR, kind)));
+  out.push(h('section', { class: 'card stack' }, h('h3', null, 'ממה הגיעה האנרגיה (ממוצע)'), macroSplit(a),
+    h('p', { class: 'muted small', style: 'margin:0' }, 'טווחים מקובלים: חלבון 10%–35%, פחמימות 45%–65%, שומן 20%–35%.'),
+    h('div', { class: 'minis' },
+      avgRow('סיבים', a.fi, GR, a.fi >= REC.fiber ? 'good' : a.fi < 18 ? 'warn' : 'info', 'המלצה: 25+'),
+      avgRow('נתרן', a.na, MG, a.na > 2300 ? 'bad' : a.na > REC.sodium ? 'warn' : 'good', 'המלצה: עד 2,000'),
+      avgRow('שומן רווי', a.sf, GR, (a.sf * 9 / (a.k || 1)) > 0.1 ? 'warn' : 'good', 'עד 10% מהאנרגיה'),
+      avgRow('סוכרים', a.su, GR, 'info', 'כולל סוכר טבעי'))));
+  // meals split
+  const mt = MEALS.reduce((s, m) => s + an.mealAvg[m.id], 0) || 1;
+  out.push(h('section', { class: 'card stack' }, h('h3', null, 'חלוקה לפי ארוחות (ממוצע ליום)'),
+    ...MEALS.map(m => h('div', { class: 'meter' },
+      h('div', { class: 'meter-top' }, h('span', null, m.name), h('span', { class: 'num muted' }, f0(an.mealAvg[m.id]) + ' ' + KC + ` · ${Math.round(an.mealAvg[m.id] / mt * 100)}%`)),
+      h('div', { class: 'bar thin' }, h('span', { style: `width:${an.mealAvg[m.id] / mt * 100}%;background:var(--accent)` }))))));
+  // top foods
+  const topK = [...an.foods].sort((x, y) => y.k - x.k).slice(0, 6);
+  const topP = [...an.foods].sort((x, y) => y.p - x.p).slice(0, 5);
+  out.push(h('section', { class: 'card stack' }, h('h3', null, 'המאכלים שתרמו הכי הרבה קלוריות'),
+    h('div', { class: 'table-wrap' }, h('table', null,
+      h('thead', null, h('tr', null, h('th', null, 'מאכל'), h('th', { class: 'n' }, 'פעמים'), h('th', { class: 'n' }, KC), h('th', { class: 'n' }, 'מהסך'))),
+      h('tbody', null, topK.map(f => h('tr', null, h('td', { style: 'white-space:normal' }, f.name), h('td', { class: 'n' }, f.times), h('td', { class: 'n' }, f0(f.k)), h('td', { class: 'n' }, Math.round(f.k / (an.totalK || 1) * 100) + '%'))))))));
+  out.push(h('section', { class: 'card stack' }, h('h3', null, 'מקורות החלבון העיקריים'),
+    h('div', { class: 'table-wrap' }, h('table', null,
+      h('thead', null, h('tr', null, h('th', null, 'מאכל'), h('th', { class: 'n' }, 'פעמים'), h('th', { class: 'n' }, 'חלבון (' + GR + ')'))),
+      h('tbody', null, topP.map(f => h('tr', null, h('td', { style: 'white-space:normal' }, f.name), h('td', { class: 'n' }, f.times), h('td', { class: 'n' }, f0(f.p)))))))));
+  // breakdown table
+  if (kind === 'month') {
+    const weeks = {};
+    an.logged.forEach(r => { const w = weekStart(r.date); (weeks[w] || (weeks[w] = [])).push(r); });
+    out.push(h('section', { class: 'card stack' }, h('h3', null, 'לפי שבועות'),
+      h('div', { class: 'table-wrap' }, h('table', null,
+        h('thead', null, h('tr', null, h('th', null, 'שבוע'), h('th', { class: 'n' }, 'ימים'), h('th', { class: 'n' }, KC + ' (ממוצע)'), h('th', { class: 'n' }, 'חלבון (ממוצע)'))),
+        h('tbody', null, Object.keys(weeks).sort().map(w => { const rs = weeks[w], k = rs.reduce((s, r) => s + r.t.k, 0) / rs.length, pr = rs.reduce((s, r) => s + r.t.p, 0) / rs.length;
+          return h('tr', null, h('td', null, dfShort.format(parseYmd(w)) + '–' + dfShort.format(parseYmd(addDays(w, 6)))), h('td', { class: 'n' }, rs.length), h('td', { class: 'n' }, f0(k)), h('td', { class: 'n' }, f0(pr) + ' ' + GR)); }))))));
+  } else {
+    out.push(h('section', { class: 'card stack' }, h('h3', null, 'פירוט לפי ימים'),
+      h('div', { class: 'table-wrap' }, h('table', null,
+        h('thead', null, h('tr', null, h('th', null, 'יום'), h('th', { class: 'n' }, KC), h('th', { class: 'n' }, 'חלבון'), h('th', { class: 'n' }, 'פחמימות'), h('th', { class: 'n' }, 'שומן'), h('th', { class: 'n' }, 'סיבים'), h('th', { class: 'n' }, 'נתרן'))),
+        h('tbody', null, an.rows.filter(r => !r.future).map(r => h('tr', null,
+          h('td', null, DOW[parseYmd(r.date).getDay()] + ' ' + dfShort.format(parseYmd(r.date)) + (r.partial ? ' (עד עכשיו)' : '')),
+          ...(r.logged ? [f0(r.t.k), f0(r.t.p), f0(r.t.c), f0(r.t.f), f0(r.t.fi), f0(r.t.na)].map(v => h('td', { class: 'n' }, v))
+            : [h('td', { class: 'n muted', colspan: 6 }, 'לא נרשם')]))))))));
+  }
+  return out;
+}
+function tile(title, value, sub, chip) {
+  return h('div', { class: 'tile' }, h('div', { class: 't' }, title), h('div', { class: 'v num' }, value),
+    h('div', { class: 's row', style: 'gap:6px' }, h('span', null, sub), chip ? h('span', { class: 'chip ' + chip[0] }, chip[1]) : null));
+}
+function avgRow(label, v, unit, lvl, ref) {
+  const txt = { good: '✓ תקין', warn: '! שווה תשומת לב', bad: '! גבוה', info: 'לידיעה' }[lvl];
+  return h('div', { class: 'mini' }, h('div', { class: 'meter-top' }, h('b', null, label), h('span', { class: 'num' }, fg(v) + ' ' + unit)),
+    h('div', { class: 'row', style: 'gap:6px' }, h('span', { class: 'chip ' + lvl }, txt), h('span', { class: 'muted', style: 'font-size:12px' }, ref)));
+}
+
+/* Bar chart: one series, a dashed target line, first day on the right (RTL). */
+function barChart(rows, get, target, cls, unit, kind) {
+  const W = 640, H = 210, padT = 14, padB = 26, padL = 8, padR = 46;
+  const vals = rows.map(r => (r.logged ? get(r) : null));
+  const maxV = Math.max(target * 1.15, ...vals.filter(v => v != null).map(v => v * 1.08), 1);
+  const step = niceStep(maxV / 4), top = Math.ceil(maxV / step) * step;
+  const y = v => padT + (H - padT - padB) * (1 - v / top);
+  const n = rows.length, slot = (W - padL - padR) / n, bw = Math.max(3, Math.min(34, slot * 0.62));
+  const xc = i => W - padR - slot * (i + 0.5);
+  const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'גרף ' + (cls === 'bar-k' ? 'קלוריות' : 'חלבון') + ' לפי ימים' });
+  for (let v = 0; v <= top + 1e-9; v += step) {
+    svg.append(s('line', { class: v === 0 ? 'base' : 'grid', x1: padL, x2: W - padR + 4, y1: y(v), y2: y(v) }));
+    svg.append(s('text', { x: W - padR + 10, y: y(v) + 4, 'text-anchor': 'start' }, f0(v)));
+  }
+  const wrap = h('div', { class: 'chart' }); const tip = h('div', { class: 'tip', hidden: true });
+  rows.forEach((r, i) => {
+    const v = vals[i], cx = xc(i);
+    const showLabel = kind === 'week' || [1, 8, 15, 22, 29].includes(parseYmd(r.date).getDate());
+    if (showLabel) svg.append(s('text', { x: cx, y: H - 8, 'text-anchor': 'middle' }, kind === 'week' ? DOW[parseYmd(r.date).getDay()] : parseYmd(r.date).getDate()));
+    if (v == null) { if (!r.future) svg.append(s('circle', { class: 'missing', cx, cy: y(0) - 4, r: 2.5 })); return; }
+    const y0 = y(0), y1 = Math.min(y(v), y0 - 2), rr = Math.min(4, bw / 2, (y0 - y1));
+    const x0 = cx - bw / 2, x1 = cx + bw / 2;
+    svg.append(s('path', { class: cls + (r.partial ? ' dim' : ''), d: `M${x0},${y0} L${x0},${y1 + rr} Q${x0},${y1} ${x0 + rr},${y1} L${x1 - rr},${y1} Q${x1},${y1} ${x1},${y1 + rr} L${x1},${y0} Z` }));
+    const hit = s('rect', { class: 'hit', x: cx - slot / 2, y: padT, width: slot, height: H - padT - padB, tabindex: 0 });
+    const show = () => {
+      tip.replaceChildren(h('b', null, DOW[parseYmd(r.date).getDay()] + ' ' + dfShort.format(parseYmd(r.date))), ' · ' + f0(v) + ' ' + unit + (r.partial ? ' (עד עכשיו)' : ''));
+      tip.hidden = false; tip.style.left = (cx / W * 100) + '%'; tip.style.top = (y(v) / H * 100 - 2) + '%';
+    };
+    hit.addEventListener('pointerenter', show); hit.addEventListener('focus', show); hit.addEventListener('click', show);
+    hit.addEventListener('pointerleave', () => { tip.hidden = true; }); hit.addEventListener('blur', () => { tip.hidden = true; });
+    svg.append(hit);
+  });
+  svg.append(s('line', { class: 'target', x1: padL, x2: W - padR, y1: y(target), y2: y(target) }));
+  svg.append(s('text', { class: 'target-label', x: padL + 2, y: y(target) - 5, direction: 'rtl', 'text-anchor': 'end' }, 'יעד ' + f0(target)));
+  wrap.append(svg, tip);
+  return wrap;
+}
+function niceStep(raw) {
+  const p = Math.pow(10, Math.floor(Math.log10(raw))), m = raw / p;
+  return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p;
+}
+
+/* Example data for the empty analysis screens (never stored) */
+function demoDays(dates) {
+  const by = n => state.common.find(f => f.name === n);
+  const mk = (meal, n, qty = 1) => { const f = by(n); return f ? { id: uid4(), meal, name: f.name, unit: { l: f.serv.label, g: f.serv.g, kind: 'serv' }, qty, g: f.serv.g * qty, v: f.v, src: 'common', code: f.code } : null; };
+  let seed = 7; const rnd = () => (seed = (seed * 9301 + 49297) % 233280) / 233280;
+  const pick = a => a[Math.floor(rnd() * a.length)];
+  const out = {}, today = todayStr();
+  for (const d of dates) {
+    if (d > today || rnd() < 0.12) continue;
+    const dow = parseYmd(d).getDay();
+    const e = [];
+    e.push(...pick([
+      [['b', 'לחם מחיטה מלאה'], ['b', 'גבינה לבנה 5%'], ['b', 'ביצה קשה'], ['b', 'סלט ישראלי קצוץ (ללא רוטב)']],
+      [['b', 'יוגורט 3%'], ['b', 'גרנולה'], ['b', 'בננה']],
+      [['b', 'ביצת עין / חביתה (מטוגנת בשמן)'], ['b', 'לחם לבן'], ['b', 'קוטג\' 5%']]]));
+    e.push(...pick([
+      [['l', 'שניצל עוף מטוגן'], ['l', 'אורז לבן מבושל (ללא שמן)'], ['l', 'סלט ירקות ישראלי עם שמן זית']],
+      [['l', 'חזה עוף צלוי (ללא עור)'], ['l', 'אורז מלא מבושל'], ['l', 'ברוקולי מבושל']],
+      [['l', 'פלאפל בפיתה (פיתה, 5 כדורים, טחינה, סלט)']],
+      [['l', 'שווארמה בפיתה (עם טחינה וסלט)']]]));
+    if (dow === 5) e.push(['d', 'חלה'], ['d', 'מרק עוף (עם ירקות)'], ['d', 'ירך / כרעיים עוף צלויות (עם עור)'], ['d', 'אורז לבן מבושל (ללא שמן)'], ['d', 'חומוס (ממרח קנוי)'], ['d', 'עוגת שוקולד']);
+    else e.push(...pick([
+      [['d', 'שקשוקה'], ['d', 'לחם לבן']],
+      [['d', 'טוסט גבינה צהובה'], ['d', 'סלט ישראלי קצוץ (ללא רוטב)']],
+      [['d', 'פסטה ברוטב עגבניות']]]));
+    e.push(['s', 'קפה הפוך (200 מ"ל חלב 3% + אספרסו)']);
+    e.push(...pick([[['s', 'במבה']], [['s', 'תפוח עץ (עם קליפה)'], ['s', 'שקדים']], [['s', 'רוגלך שוקולד']], [['s', 'שוקולד חלב']]]));
+    if (dow === 6) e.push(['l', 'גלידת שמנת, כל הטעמים חוץ משוקולד (שטראוס / נסטלה)']);
+    out[d] = { date: d, entries: e.map(x => mk(x[0], x[1])).filter(Boolean) };
+  }
+  return out;
+}
+
+/* ---------- PROFILE / ONBOARDING ---------- */
+function renderProfile(onboarding) {
+  const p0 = state.profile || {};
+  const f = { name: p0.name || '', sex: p0.sex || '', age: p0.age || '', height: p0.height || '', weight: p0.weight || '',
+    activity: p0.activity || 1.375, goal: p0.goal || 'maintain', kcalTarget: p0.kcalTarget || '', proteinTarget: p0.proteinTarget || '',
+    kcalManual: !!p0.kcalManual, proteinManual: !!p0.proteinManual };
+  const out = [];
+  const others = people().filter(x => x.id !== state.pid).length;
+  if (onboarding) out.push(h('section', { class: 'card stack' },
+    h('h2', null, others ? 'משתמש חדש' : 'ברוכים הבאים לצלחת'),
+    h('p', { style: 'margin:0' }, 'כמה פרטים קצרים, וצלחת תחשב יעד קלורי ויעד חלבון. אחר כך רושמים מה אוכלים, ומקבלים ניתוח יומי, שבועי וחודשי. אפשר לשנות כל פרט וכל יעד בהמשך במסך "פרופיל".'),
+    others ? h('div', null, h('button', { class: 'btn', type: 'button', onclick: logout }, 'ביטול וחזרה לרשימת המשתמשים')) : null));
+  else out.push(h('h2', null, 'הפרופיל והיעדים שלך'));
+
+  const calcBox = h('div', { class: 'calc', 'aria-live': 'polite' });
+  const kcalIn = h('input', { type: 'number', id: 'pf-kcal', inputmode: 'numeric', min: 800, max: 6000, step: 50, value: f.kcalTarget });
+  const protIn = h('input', { type: 'number', id: 'pf-prot', inputmode: 'numeric', min: 20, max: 400, step: 5, value: f.proteinTarget });
+  const errBox = h('div', { class: 'err', role: 'alert' });
+  const form = h('form', { class: 'form card', novalidate: true });
+
+  const radios = (name, opts, cur, cls) => h('div', { class: 'choices ' + (cls || ''), role: 'radiogroup' }, opts.map(o =>
+    h('label', { class: 'choice' }, h('input', { type: 'radio', name, value: String(o[0]), checked: String(o[0]) === String(cur) }),
+      h('span', null, h('b', null, o[1]), o[2] ? h('small', null, o[2]) : null))));
+
+  form.append(
+    h('div', { class: 'field' }, h('label', { for: 'pf-name' }, 'שם'), h('div', { class: 'hint' }, 'כך המשתמש יופיע ברשימת המשתמשים.'),
+      h('input', { type: 'text', id: 'pf-name', value: f.name, autocomplete: 'given-name', maxlength: 40 })),
+    h('div', { class: 'field' }, h('div', { class: 'lbl', id: 'pf-sex-l' }, 'מין ביולוגי'), h('div', { class: 'hint' }, 'משפיע על חישוב קצב חילוף החומרים.'),
+      radios('sex', [['f', 'נקבה'], ['m', 'זכר']], f.sex, 'inline')),
+    h('div', { class: 'grid2' },
+      h('div', { class: 'field' }, h('label', { for: 'pf-age' }, 'גיל'), h('input', { type: 'number', id: 'pf-age', inputmode: 'numeric', min: 14, max: 100, value: f.age })),
+      h('div', { class: 'field' }, h('label', { for: 'pf-height' }, 'גובה (ס"מ)'), h('input', { type: 'number', id: 'pf-height', inputmode: 'numeric', min: 120, max: 230, value: f.height })),
+      h('div', { class: 'field' }, h('label', { for: 'pf-weight' }, 'משקל (ק"ג)'), h('input', { type: 'number', id: 'pf-weight', inputmode: 'decimal', min: 35, max: 300, step: 0.1, value: f.weight }))),
+    h('div', { class: 'field' }, h('div', { class: 'lbl' }, 'רמת פעילות'), radios('activity', ACTIVITY, f.activity)),
+    h('div', { class: 'field' }, h('div', { class: 'lbl' }, 'מטרה'), radios('goal', GOALS, f.goal)),
+    calcBox,
+    h('div', { class: 'grid2' },
+      h('div', { class: 'field' }, h('label', { for: 'pf-kcal' }, 'יעד קלורי יומי (' + KC + ')'), kcalIn),
+      h('div', { class: 'field' }, h('label', { for: 'pf-prot' }, 'יעד חלבון יומי (' + GR + ')'), protIn)),
+    h('div', { class: 'row' }, h('button', { type: 'button', class: 'btn ghost', id: 'pf-reset' }, 'חזרה ליעדים המומלצים'),
+      h('span', { class: 'hint muted small' }, 'אפשר להקליד יעד אחר, למשל לפי המלצת דיאטנית.')),
+    h('p', { class: 'muted small', style: 'margin:0' }, 'החישוב משתמש בנוסחת Mifflin-St Jeor ובהמלצות מקובלות לחלבון. הוא לא מתאים להריון, הנקה, גיל ההתבגרות או מצבים רפואיים. במקרים כאלה כדאי לקבוע יעדים עם דיאטנית.'),
+    errBox,
+    h('button', { type: 'submit', class: 'btn primary big' }, onboarding ? 'שמירה והתחלה' : 'שמירת השינויים'));
+
+  const read = () => {
+    const fd = new FormData(form);
+    return { name: $('#pf-name', form).value.trim(), sex: fd.get('sex') || '', age: +$('#pf-age', form).value, height: +$('#pf-height', form).value,
+      weight: +$('#pf-weight', form).value, activity: +fd.get('activity'), goal: fd.get('goal') };
+  };
+  const valid = v => v.sex && v.age >= 14 && v.age <= 100 && v.height >= 120 && v.height <= 230 && v.weight >= 35 && v.weight <= 300;
+  let kcalManual = f.kcalManual, protManual = f.proteinManual;
+  const update = () => {
+    const v = read();
+    if (!valid(v)) {
+      calcBox.replaceChildren(h('div', { class: 'muted' }, 'אחרי שממלאים מין, גיל, גובה ומשקל, החישוב יופיע כאן.'));
+      return null;
+    }
+    const c = calc(v);
+    if (!kcalManual) kcalIn.value = c.kcal;
+    if (!protManual) protIn.value = c.protein;
+    const warns = [];
+    if (c.bmi < 18.5 && v.goal.startsWith('lose')) warns.push(h('div', { class: 'notice bad' }, 'ה-BMI שלך מתחת ל-18.5. לא מומלץ לרדת במשקל בלי ליווי של דיאטנית או רופא.'));
+    if (c.clamped) warns.push(h('div', { class: 'notice warn' }, `היעד הוגבל ל-${f0(c.kcal)} ${KC}, הרף התחתון שמקובל לתכנן בלי ליווי מקצועי.`));
+    if (v.age < 18) warns.push(h('div', { class: 'notice warn' }, 'החישוב מיועד לבני 18 ומעלה. מתחת לגיל הזה כדאי להתייעץ עם דיאטנית.'));
+    calcBox.replaceChildren(h('b', null, 'החישוב שלך'), h('dl', null,
+      h('div', null, h('dt', null, 'BMI'), h('dd', { class: 'num' }, f1(c.bmi) + ' · ' + bmiLabel(c.bmi))),
+      h('div', null, h('dt', null, 'חילוף חומרים במנוחה'), h('dd', { class: 'num' }, f0(c.bmr) + ' ' + KC)),
+      h('div', null, h('dt', null, 'הוצאה יומית משוערת'), h('dd', { class: 'num' }, f0(c.tdee) + ' ' + KC)),
+      h('div', null, h('dt', null, 'יעד קלורי מומלץ'), h('dd', { class: 'num' }, f0(c.kcal) + ' ' + KC)),
+      h('div', null, h('dt', null, 'יעד חלבון מומלץ'), h('dd', { class: 'num' }, f0(c.protein) + ' ' + GR + ` (${f1(c.perKg)} ${GR} לק"ג)`))),
+      h('div', { class: 'muted small' }, `החלבון מחושב לפי רמת הפעילות: ${f1(c.actBase)} ${GR} לכל ק"ג ברמה "${c.actLabel}"`
+        + (c.goalAdd ? `, ועוד ${f1(c.goalAdd)} בגלל המטרה` : '')
+        + (c.perKg !== Math.round(Math.min(PROTEIN_MAX, c.actBase + c.goalAdd) * 10) / 10 ? `, ולפחות 1.2 מגיל 65` : '')
+        + (c.adjusted ? `. כשה-BMI מעל 30 החישוב הוא לפי משקל מותאם (${f0(c.refW)} ק"ג).` : '.')), ...warns);
+    return c;
+  };
+  form.addEventListener('input', e => {
+    if (e.target === kcalIn) kcalManual = true;
+    else if (e.target === protIn) protManual = true;
+    update();
+  });
+  form.addEventListener('change', update);
+  $('#pf-reset', form).addEventListener('click', () => { kcalManual = false; protManual = false; update(); });
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const v = read();
+    if (!v.name || !valid(v)) { errBox.textContent = 'חסרים פרטים: צריך שם, לבחור מין ולמלא גיל (14–100), גובה (120–230 ס"מ) ומשקל (35–300 ק"ג).'; return; }
+    const c = update();
+    const kt = +kcalIn.value, pt = +protIn.value;
+    if (!(kt >= 800 && kt <= 6000) || !(pt >= 20 && pt <= 400)) { errBox.textContent = 'היעד הקלורי צריך להיות בין 800 ל-6,000, ויעד החלבון בין 20 ל-400 גרם.'; return; }
+    errBox.textContent = '';
+    state.profile = { ...v, kcalTarget: kt, proteinTarget: pt, kcalManual: kcalManual && kt !== c.kcal, proteinManual: protManual && pt !== c.protein,
+      pv: PROFILE_VERSION, created: (state.profile && state.profile.created) || (state.pid === 'main' ? 0 : Date.now()), updated: Date.now() };
+    persist(did('profile'));
+    if (onboarding) { state.newUser = false; rememberPid(state.pid); toast('נשמר. אפשר להתחיל לרשום.'); location.hash = '#today'; route(); }
+    else { toast('הפרופיל נשמר'); render(); }
+  });
+  setTimeout(update, 0);
+  out.push(form);
+
+  if (!onboarding) {
+    let armed = false, armTimer = 0;
+    const delBtn = h('button', { class: 'btn danger', type: 'button', onclick: async () => {
+      if (!armed) { armed = true; delBtn.textContent = 'ללחוץ שוב כדי למחוק'; clearTimeout(armTimer); armTimer = setTimeout(() => { armed = false; delBtn.textContent = 'מחיקת המשתמש'; }, 5000); return; }
+      clearTimeout(armTimer); await deleteAll(); toast('המשתמש והנתונים שלו נמחקו');
+    } }, 'מחיקת המשתמש');
+    const mine = state.custom;
+    out.push(h('section', { class: 'card stack' }, h('h3', null, 'מאכלים שהוספתי'),
+      mine.length ? h('ul', { class: 'entries', style: 'margin:0' }, mine.map(f => h('li', { class: 'entry-row' },
+        h('div', { class: 'entry', style: 'cursor:default' }, h('span', { class: 'n' }, f.name),
+          h('span', { class: 'a num' }, f.serv ? `${f.serv.label} · ${f0(f.v[0] * f.serv.g / 100)} ${KC}` : `${f0(f.v[0])} ${KC} ל-100 ${GR}`)),
+        state.readonly ? null : h('div', { class: 'entry-actions' },
+          h('button', { class: 'icon-btn sm', type: 'button', title: 'עריכה', 'aria-label': 'עריכת ' + f.name, onclick: () => openCustomEdit(f.id) }, '✎'),
+          h('button', { class: 'icon-btn sm', type: 'button', title: 'מחיקה', 'aria-label': 'מחיקת ' + f.name, onclick: () => removeCustom(f.id) }, '✕')))))
+        : h('p', { class: 'muted', style: 'margin:0' }, 'עוד לא הוספת מאכלים משלך. מוסיפים מאכל מהחיפוש, בכפתור "לא מצאת? הוספת מאכל משלך".'),
+      mine.length ? h('p', { class: 'muted small', style: 'margin:0' }, 'עריכה או מחיקה של מאכל לא משנות רישומים שכבר נעשו ביומן.') : null));
+    out.push(h('section', { class: 'card stack' }, h('h3', null, 'הנתונים שלך'),
+      h('p', { style: 'margin:0' }, state.mode === 'db'
+        ? 'היומן נשמר בחשבון Claude שלך ונגיש רק לך, גם מהטלפון וגם מהמחשב.'
+        : 'היומן נשמר בדפדפן הזה בלבד. בדפדפן או במכשיר אחר הוא לא יופיע.'),
+      h('p', { class: 'muted small', style: 'margin:0' }, `ימים מתועדים: ${Object.keys(state.days).length} · מאכלים שהוספת בעצמך: ${state.custom.length}`),
+      h('div', { class: 'row' }, h('button', { class: 'btn', type: 'button', onclick: logout }, 'יציאה מהמשתמש'),
+        h('span', { class: 'muted small' }, 'חוזרים לרשימת המשתמשים. משם אפשר להיכנס למשתמש אחר או להוסיף משתמש חדש.')),
+      h('div', { class: 'row' }, delBtn, h('span', { class: 'muted small' }, 'מוחק את הפרופיל, היומן והמאכלים של המשתמש הזה בלבד. אי אפשר לשחזר.'))));
+  }
+  return out;
+}
+async function deleteAll() {
+  const ids = ['profile', 'custom', ...Object.keys(state.days).map(d => 'day-' + d)].map(did);
+  delete state.all[state.pid];
+  for (const id of ids) persist(id);
+  state.pid = null; state.newUser = false; indexCustom(); rememberPid(LOGGED_OUT);
+  render(); window.scrollTo(0, 0);
+}
+
+/* ---------- ADD / EDIT SHEET ---------- */
+const sheet = { step: 'search', meal: 'b', date: null, food: null, entryId: null, editFoodId: null, query: '', unitIdx: 0, qty: 1 };
+function openSheet() { $('#sheet').hidden = false; }
+function closeSheet() { $('#sheet').hidden = true; sheet.food = null; sheet.entryId = null; sheet.editFoodId = null; }
+function openCustomEdit(id, backToAmount) {
+  if (!state.custom.some(x => x.id === id)) return;
+  Object.assign(sheet, { step: 'custom', editFoodId: id, backToAmount: !!backToAmount, food: null, entryId: null, query: '' });
+  renderSheet(); openSheet();
+}
+// After editing a food that was being added, continue to its amount screen.
+function leaveCustomEdit(id) {
+  const back = sheet.backToAmount; sheet.editFoodId = null; sheet.backToAmount = false;
+  const f = customIndex.find(x => x.id === id);
+  if (back && f) pickFood(f); else { closeSheet(); render(); }
+}
+function removeCustom(id) {
+  const before = state.custom, f = before.find(x => x.id === id);
+  if (!f) return;
+  state.custom = before.filter(x => x.id !== id); indexCustom(); persist(did('custom')); render();
+  toast(f.name + ' נמחק מהמאכלים שלך', 'ביטול', () => { state.custom = before; indexCustom(); persist(did('custom')); render(); });
+}
+$('#sheet-close').addEventListener('click', closeSheet);
+$('#user-btn').addEventListener('click', logout);
+$('#sheet').addEventListener('click', e => { if (e.target.id === 'sheet') closeSheet(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#sheet').hidden) closeSheet(); });
+
+function openAdd(meal) {
+  Object.assign(sheet, { step: 'search', meal, date: state.date, food: null, entryId: null, editFoodId: null, query: '' });
+  loadTz(); renderSheet(); openSheet();
+  setTimeout(() => { const q = $('#food-q'); if (q) q.focus(); }, 30);
+}
+function openEdit(entryId) {
+  const e = getDay(state.date).entries.find(x => x.id === entryId); if (!e) return;
+  loadTz();
+  const found = findFoodFor(e);
+  const food = found ? { ...found } : { name: e.name, v: e.v, units: [], src: e.src, code: e.code };
+  Object.assign(sheet, { step: 'amount', meal: e.meal, date: state.date, food, entryId, editFoodId: null, query: '' });
+  const opts = unitOptions(food, e.unit);
+  sheet.unitIdx = Math.max(0, opts.findIndex(o => o.kind === e.unit.kind && o.l === e.unit.l));
+  sheet.qty = e.qty;
+  renderSheet(); openSheet();
+}
+function renderSheet() {
+  const body = $('#sheet-body'), title = $('#sheet-title');
+  if (sheet.step === 'search') {
+    title.textContent = 'הוספה ל' + MEAL_NAME[sheet.meal];
+    const q = h('input', { type: 'search', id: 'food-q', value: sheet.query, placeholder: "חיפוש: קוטג', שניצל, במבה…", autocomplete: 'off', 'aria-label': 'חיפוש מאכל',
+      oninput: e => { sheet.query = e.target.value; renderResults(); } });
+    body.replaceChildren(h('div', { class: 'field' }, q), h('div', { id: 'results-box' }),
+      h('button', { class: 'btn ghost', onclick: () => { sheet.step = 'custom'; renderSheet(); } }, 'לא מצאת? הוספת מאכל משלך'));
+    renderResults();
+  } else if (sheet.step === 'amount') renderAmount(body, title);
+  else renderCustom(body, title);
+}
+function renderResults() {
+  const box = $('#results-box'); if (!box) return;
+  if (state.foodsError) { box.replaceChildren(h('div', { class: 'notice bad' }, 'רשימת המאכלים לא נטענה. אפשר להוסיף מאכל משלך בינתיים.')); return; }
+  const q = sheet.query.trim();
+  if (!q) {
+    const rec = recentFoods();
+    if (!rec.length) { box.replaceChildren(h('p', { class: 'muted', style: 'margin:0' }, 'מקלידים שם של מאכל. יש כאן כ-320 מאכלים ישראליים נפוצים עם מנה טיפוסית, ועוד כ-4,500 מאכלים ממאגר צמרת.')); return; }
+    box.replaceChildren(h('div', { class: 'muted small' }, 'נרשמו לאחרונה · לחיצה מוסיפה באותה כמות'),
+      h('ul', { class: 'results' }, rec.map(e => h('li', null, h('button', { class: 'res', onclick: () => quickAdd(e) },
+        h('span', { class: 'n' }, e.name), h('span', { class: 'd num' }, amountText(e) + ' · ' + f0(entryKcal(e)) + ' ' + KC))))));
+    return;
+  }
+  const res = searchFoods(q);
+  const items = res.map(f => {
+    const tag = f.src === 'custom' ? h('span', { class: 'tag mine' }, 'שלי') : f.src === 'tz' ? h('span', { class: 'tag' }, 'צמרת') : h('span', { class: 'tag' }, CAT[f.cat] || '');
+    const opts = unitOptions(f), du = opts[defaultUnitIdx(opts, f.spoon)];
+    const d = du.kind !== 'gram' ? `${du.l} · ${f0(f.v[0] * du.g / 100)} ${KC}` : `${f0(f.v[0])} ${KC} ל-100 ${GR}`;
+    return h('li', null, h('button', { class: 'res', onclick: () => pickFood(f) }, h('span', { class: 'n' }, f.name), h('span', { class: 'd num' }, tag, d)));
+  });
+  const kids = [items.length ? h('ul', { class: 'results' }, items) : h('p', { class: 'muted', style: 'margin:0' }, `לא נמצא "${q}". נסו מילה אחרת, או הוסיפו מאכל משלכם.`)];
+  if (!state.tzLoaded) kids.push(h('div', { class: 'muted small', style: 'padding-top:6px' }, 'טוען עוד מאכלים ממאגר צמרת…'));
+  box.replaceChildren(...kids);
+}
+function quickAdd(e) {
+  const entries = getDay(sheet.date).entries.concat([{ ...clone(e), id: uid4(), meal: sheet.meal, t: Date.now() }]);
+  setDay(sheet.date, entries); closeSheet(); render(); toast(e.name + ' נוסף');
+}
+function pickFood(f) {
+  sheet.food = f; sheet.step = 'amount';
+  const opts = unitOptions(f);
+  sheet.unitIdx = defaultUnitIdx(opts, f.spoon);
+  sheet.qty = opts[sheet.unitIdx].kind === 'gram' ? 100 : 1;
+  renderSheet();
+}
+function unitOptions(f, saved) {
+  const o = [];
+  if (f.serv && f.serv.g) o.push({ l: f.serv.label, g: f.serv.g, kind: 'serv', show: 'מנה טיפוסית: ' + f.serv.label });
+  for (const [n, g, approx] of (f.units || [])) {
+    const l = `${n} (${approx ? 'כ-' : ''}${fg(g)} ${GR})`;
+    o.push({ l, g, kind: 'unit', show: l });
+  }
+  if (saved && saved.kind !== 'gram' && !o.some(x => x.kind === saved.kind && x.l === saved.l)) o.unshift({ ...saved, show: saved.l });
+  o.push({ l: GR, g: 1, kind: 'gram', show: 'גרמים' });
+  return o;
+}
+function defaultUnitIdx(opts, spoon) {
+  const serv = opts.findIndex(o => o.kind === 'serv'); if (serv >= 0) return serv;
+  const order = spoon ? ['כף'] : ['פרוסה בינונית', 'יחידה בינונית', 'מנה בינונית', 'פרוסה', 'כוס', 'יחידה', 'כף'];
+  for (const want of order) {
+    const i = opts.findIndex(o => o.kind === 'unit' && o.l.startsWith(want + ' (')); if (i >= 0) return i;
+  }
+  return opts.length - 1;
+}
+function renderAmount(body, title) {
+  const f = sheet.food, opts = unitOptions(f, sheet.entryId ? (getDay(sheet.date).entries.find(x => x.id === sheet.entryId) || {}).unit : null);
+  const editing = !!sheet.entryId;
+  title.textContent = editing ? 'עריכה' : 'כמה אכלת?';
+  const unit = () => opts[sheet.unitIdx] || opts[0];
+  const grams = () => unit().g * sheet.qty;
+  const prev = h('div', { class: 'preview', 'aria-live': 'polite' });
+  const gramsTxt = h('div', { class: 'muted small num' });
+  const qtyIn = h('input', { type: 'number', id: 'qty', inputmode: 'decimal', min: 0, step: 'any', value: sheet.qty, 'aria-label': 'כמות' });
+  const upd = () => {
+    const g = grams(), v = f.v;
+    gramsTxt.textContent = unit().kind === 'gram' ? '' : '= ' + fg(g) + ' ' + GR;
+    const cell = (val, lbl) => h('div', null, h('div', { class: 'v num' }, val), h('div', { class: 'l' }, lbl));
+    prev.replaceChildren(cell(f0(v[0] * g / 100), KC), cell(f1(v[1] * g / 100), 'חלבון ' + GR), cell(f1(v[2] * g / 100), 'פחמימות ' + GR), cell(f1(v[4] * g / 100), 'שומן ' + GR));
+  };
+  const stepSize = () => (unit().kind === 'gram' ? 10 : 0.5);
+  qtyIn.addEventListener('input', () => { const n = parseFloat(qtyIn.value); sheet.qty = isFinite(n) && n >= 0 ? n : 0; upd(); });
+  const unitSel = h('select', { id: 'unit', 'aria-label': 'יחידה', onchange: e => {
+    const wasGram = unit().kind === 'gram'; const g = grams();
+    sheet.unitIdx = +e.target.value; const isGram = unit().kind === 'gram';
+    if (isGram && !wasGram) sheet.qty = Math.round(g); else if (!isGram && wasGram) sheet.qty = 1;
+    qtyIn.value = sheet.qty; upd();
+  } }, opts.map((o, i) => h('option', { value: i, selected: i === sheet.unitIdx }, o.show)));
+  const srcTxt = { common: 'רשימת המאכלים הנפוצים (מאגר צמרת)', est: 'הערכה (אין פריט מתאים בצמרת)', tz: 'מאגר צמרת, משרד הבריאות', custom: 'מאכל שהוספת' }[f.src] || '';
+  const mealSeg = h('div', { class: 'seg', role: 'group', 'aria-label': 'ארוחה' }, MEALS.map(m => h('button', { type: 'button', 'aria-pressed': String(sheet.meal === m.id),
+    onclick: ev => { sheet.meal = m.id; for (const b of mealSeg.children) b.setAttribute('aria-pressed', String(b === ev.currentTarget)); } }, m.name)));
+  const save = () => {
+    if (!(sheet.qty > 0)) { toast('צריך כמות גדולה מאפס'); return; }
+    const u = unit();
+    const entry = { id: sheet.entryId || uid4(), meal: sheet.meal, name: f.name, unit: { l: u.l, g: u.g, kind: u.kind }, qty: Math.round(sheet.qty * 100) / 100,
+      g: Math.round(grams() * 10) / 10, v: f.v, src: f.src, code: f.src === 'custom' ? f.id : (f.code || ''), t: Date.now() };
+    const day = getDay(sheet.date);
+    const entries = editing ? day.entries.map(x => (x.id === entry.id ? entry : x)) : day.entries.concat([entry]);
+    setDay(sheet.date, entries); closeSheet(); render(); toast(editing ? 'עודכן' : f.name + ' נוסף');
+  };
+  body.replaceChildren(
+    h('div', null, h('h3', null, f.name), h('div', { class: 'row', style: 'gap:6px' }, h('span', { class: 'muted small' }, srcTxt),
+      f.src === 'custom' && !editing && customIndex.some(x => x.id === f.id) ? h('button', { class: 'btn ghost small', type: 'button', onclick: () => openCustomEdit(f.id, true) }, 'עריכת המאכל') : null)),
+    h('div', { class: 'field' }, h('label', { for: 'unit' }, 'יחידה'), unitSel),
+    h('div', { class: 'field' }, h('label', { for: 'qty' }, 'כמות'),
+      h('div', { class: 'qty' },
+        h('button', { type: 'button', 'aria-label': 'פחות', onclick: () => { sheet.qty = Math.max(0, Math.round((sheet.qty - stepSize()) * 100) / 100); qtyIn.value = sheet.qty; upd(); } }, '−'),
+        qtyIn,
+        h('button', { type: 'button', 'aria-label': 'יותר', onclick: () => { sheet.qty = Math.round((sheet.qty + stepSize()) * 100) / 100; qtyIn.value = sheet.qty; upd(); } }, '+')),
+      gramsTxt),
+    prev,
+    h('div', { class: 'field' }, h('div', { class: 'lbl' }, 'ארוחה'), mealSeg),
+    h('div', { class: 'row' },
+      h('button', { class: 'btn primary', style: 'flex:1', onclick: save }, editing ? 'שמירה' : 'הוספה'),
+      editing ? h('button', { class: 'btn danger', onclick: () => { const d = sheet.date, id = sheet.entryId; closeSheet(); removeEntry(d, id); } }, 'הסרה מהיומן')
+        : h('button', { class: 'btn', onclick: () => { sheet.step = 'search'; renderSheet(); } }, 'חזרה')));
+  upd();
+}
+function renderCustom(body, title) {
+  const editing = sheet.editFoodId ? state.custom.find(x => x.id === sheet.editFoodId) : null;
+  const isServ0 = !!(editing && editing.serv);
+  // Prefill: stored values are per 100 g; show them per serving when the food was entered that way.
+  const pre = i => {
+    if (!editing || editing.v[i] == null) return '';
+    const val = isServ0 ? editing.v[i] * editing.serv.g / 100 : editing.v[i];
+    return String(Math.round(val * 10) / 10);
+  };
+  title.textContent = editing ? 'עריכת מאכל' : 'מאכל משלך';
+  const num = (id, label, req, i) => h('div', { class: 'field' }, h('label', { for: id }, label + (req ? '' : ' (לא חובה)')),
+    h('input', { type: 'number', id, inputmode: 'decimal', min: 0, step: 'any', value: pre(i) }));
+  const basis = h('div', { class: 'choices inline', role: 'radiogroup' },
+    h('label', { class: 'choice' }, h('input', { type: 'radio', name: 'basis', value: '100', checked: !isServ0 }), h('span', null, h('b', null, 'ל-100 גרם'), h('small', null, 'כמו בתווית'))),
+    h('label', { class: 'choice' }, h('input', { type: 'radio', name: 'basis', value: 'serv', checked: isServ0 }), h('span', null, h('b', null, 'למנה'), h('small', null, 'יחידה, פרוסה, מנה'))));
+  const servBox = h('div', { class: 'grid2', hidden: !isServ0 },
+    h('div', { class: 'field' }, h('label', { for: 'cu-sl' }, 'שם המנה'), h('input', { type: 'text', id: 'cu-sl', placeholder: 'למשל: חטיף, פרוסה', maxlength: 30,
+      value: isServ0 ? editing.serv.label.replace(/\s*\([^)]*\)\s*$/, '') : '' })),
+    h('div', { class: 'field' }, h('label', { for: 'cu-sg' }, 'משקל המנה (' + GR + ')'), h('input', { type: 'number', id: 'cu-sg', inputmode: 'decimal', min: 1, step: 'any',
+      value: isServ0 ? String(editing.serv.g) : '' })));
+  basis.addEventListener('change', () => { servBox.hidden = basis.querySelector('input:checked').value !== 'serv'; });
+  const err = h('div', { class: 'err', role: 'alert' });
+  const form = h('form', { class: 'form', novalidate: true },
+    h('div', { class: 'field' }, h('label', { for: 'cu-name' }, 'שם המאכל'), h('input', { type: 'text', id: 'cu-name', maxlength: 60, value: editing ? editing.name : sheet.query })),
+    h('div', { class: 'field' }, h('div', { class: 'lbl' }, 'הערכים הם'), basis), servBox,
+    h('div', { class: 'grid2' }, num('cu-k', 'קלוריות (' + KC + ')', true, 0), num('cu-p', 'חלבון (' + GR + ')', true, 1), num('cu-c', 'פחמימות (' + GR + ')', false, 2),
+      num('cu-f', 'שומן (' + GR + ')', false, 4), num('cu-su', 'סוכרים (' + GR + ')', false, 3), num('cu-fi', 'סיבים (' + GR + ')', false, 6), num('cu-na', 'נתרן (' + MG + ')', false, 7)),
+    editing ? h('p', { class: 'muted small', style: 'margin:0' }, 'השינוי חל על רישומים מעכשיו. רישומים שכבר נעשו ביומן נשארים כמו שהם.') : null,
+    err,
+    h('div', { class: 'row' }, h('button', { type: 'submit', class: 'btn primary', style: 'flex:1' }, editing ? 'שמירה' : 'שמירה והמשך'),
+      h('button', { type: 'button', class: 'btn', onclick: () => { if (editing) leaveCustomEdit(editing.id); else { sheet.step = 'search'; renderSheet(); } } }, editing ? 'ביטול' : 'חזרה')));
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const val = id => { const x = $('#' + id, form).value; return x === '' ? null : +x; };
+    const name = $('#cu-name', form).value.trim();
+    const isServ = basis.querySelector('input:checked').value === 'serv';
+    const sg = val('cu-sg');
+    const k = val('cu-k'), pr = val('cu-p');
+    if (!name || k == null || pr == null || k < 0 || pr < 0) { err.textContent = 'צריך שם, קלוריות וחלבון.'; return; }
+    if (isServ && !(sg > 0)) { err.textContent = 'צריך את משקל המנה בגרמים כדי לחשב.'; return; }
+    const factor = isServ ? 100 / sg : 1;
+    const v = [k, pr, val('cu-c'), val('cu-su'), val('cu-f'), null, val('cu-fi'), val('cu-na')].map(x => (x == null ? null : Math.round(x * factor * 10) / 10));
+    const sl = $('#cu-sl', form).value.trim();
+    const food = { id: editing ? editing.id : uid4(), name, v, serv: isServ ? { label: `${sl || 'מנה'} (${fg(sg)} ${GR})`, g: sg } : null };
+    if (editing) {
+      state.custom = state.custom.map(x => (x.id === food.id ? food : x)); indexCustom(); persist(did('custom'));
+      leaveCustomEdit(food.id); toast('המאכל עודכן');
+      return;
+    }
+    state.custom = state.custom.concat([food]); indexCustom(); persist(did('custom'));
+    pickFood(customIndex.find(x => x.id === food.id));
+  });
+  body.replaceChildren(form);
+  setTimeout(() => $('#cu-name', form).focus(), 30);
+}
+
+/* ---------- start ---------- */
+loadFoods().then(() => { if (state.loaded && state.profile && state.view !== 'profile') safeRender(); });
+initStore();
+})();
+</script>
+
+</body></html>
