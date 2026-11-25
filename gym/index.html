@@ -1,0 +1,689 @@
+<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#1d4ccc"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%231d4ccc'/%3E%3Crect x='5' y='15' width='22' height='2.2' fill='white'/%3E%3Crect x='8' y='9' width='3' height='14' rx='1' fill='white'/%3E%3Crect x='21' y='9' width='3' height='14' rx='1' fill='white'/%3E%3C/svg%3E"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script><script src="../firebase-config.js"></script></head><body>
+<title>יומן כושר</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;700&family=Rubik:wght@500;700;800&display=swap">
+<style>
+/* layout: one narrow column; sticky workout header on top, the rest timer docked to the bottom edge. Accents borrow the colour code of competition plates (blue 20 kg, red 25 kg). */
+:root {
+  --bg: #edf0f3; --surface: #ffffff; --ink: #151a20; --muted: #5a6470; --line: #d3d9e0;
+  --accent: #1d4ccc; --on-accent: #ffffff; --soft: #e1e8fa;
+  --red: #c42d26; --red-soft: #fbe5e3; --green: #1b7a45; --green-soft: #def3e6; --chip: #e6eaee;
+  --f-display: "Rubik", "Heebo", system-ui, "Segoe UI", Arial, sans-serif;
+  --f-body: "Heebo", system-ui, "Segoe UI", Arial, sans-serif;
+  --r: 14px;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0e1115; --surface: #171b21; --ink: #e7ebf0; --muted: #98a2ae; --line: #2a3139;
+  --accent: #6e94ff; --on-accent: #0b1020; --soft: #1c2640;
+  --red: #ff6f63; --red-soft: #3a1b19; --green: #50c482; --green-soft: #15301f; --chip: #222830;
+  color-scheme: dark; } }
+:root[data-theme="dark"] {
+  --bg: #0e1115; --surface: #171b21; --ink: #e7ebf0; --muted: #98a2ae; --line: #2a313a;
+  --accent: #6e94ff; --on-accent: #0b1020; --soft: #1c2640;
+  --red: #ff6f63; --red-soft: #3a1b19; --green: #50c482; --green-soft: #15301f; --chip: #222830;
+  color-scheme: dark; }
+
+[hidden] { display: none !important; }
+body { background: var(--bg); color: var(--ink); font-family: var(--f-body); font-size: 16px; line-height: 1.45; }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.wrap { max-width: 640px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 12px 140px; display: flex; flex-direction: column; gap: 14px; }
+h1, h2, h3 { font-family: var(--f-display); margin: 0; text-wrap: balance; line-height: 1.15; }
+h1 { font-size: 1.9rem; font-weight: 800; }
+h2 { font-size: 1.25rem; font-weight: 700; }
+h3 { font-size: 1.08rem; font-weight: 700; }
+.num { font-variant-numeric: tabular-nums; }
+.muted { color: var(--muted); }
+.small { font-size: .85rem; }
+.label { font-size: .75rem; letter-spacing: .06em; color: var(--muted); font-weight: 500; }
+button { font: inherit; color: inherit; cursor: pointer; }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 10px 16px; font-weight: 500; min-height: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); font-weight: 700; }
+.btn.danger { color: var(--red); border-color: var(--red); background: transparent; }
+.btn.ghost { border-color: transparent; background: transparent; color: var(--muted); }
+.btn.big { min-height: 60px; font-size: 1.15rem; border-radius: 14px; width: 100%; }
+.btn.icon { padding: 0; width: 44px; min-height: 44px; border-color: transparent; background: transparent; color: var(--muted); }
+.btn.icon:hover { background: var(--chip); }
+.btn svg { width: 20px; height: 20px; flex: none; }
+
+/* home */
+.hero { display: flex; flex-direction: column; gap: 6px; padding-block: 12px 4px; }
+.plates { display: flex; gap: 4px; align-items: center; height: 26px; }
+.plates i { display: block; width: 7px; border-radius: 2px; }
+.start-card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.history { display: flex; flex-direction: column; gap: 8px; }
+.hrow { display: grid; grid-template-columns: auto 1fr auto; gap: 14px; align-items: center; text-align: start; width: 100%; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.hrow .date { font-family: var(--f-display); font-weight: 700; text-align: center; min-width: 3.2rem; line-height: 1.1; }
+.hrow .date b { display: block; font-size: 1.4rem; }
+.hrow .names { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* log */
+.topbar { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 6; background: var(--bg); display: flex; align-items: center; gap: 10px; padding-block: 8px; border-bottom: 1px solid var(--line); }
+.topbar .grow { flex: 1; min-width: 0; }
+.clock { font-family: var(--f-display); font-weight: 700; font-size: 1.3rem; }
+.ex { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 12px 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+.ex-head { display: flex; align-items: flex-start; gap: 4px; }
+.ex-head .grow { flex: 1; min-width: 0; padding-top: 6px; }
+.ex-head .en { color: var(--muted); font-size: .85rem; direction: ltr; text-align: right; }
+.prev { font-size: .85rem; color: var(--muted); }
+.prev span { display: inline-block; direction: ltr; }
+.sets { display: flex; flex-direction: column; gap: 6px; }
+.srow { display: grid; grid-template-columns: 1.8rem minmax(0, 1fr) minmax(0, 1fr) 44px; gap: 8px; align-items: center; }
+.srow.head { font-size: .75rem; color: var(--muted); letter-spacing: .04em; }
+.srow .n { font-family: var(--f-display); font-weight: 700; color: var(--muted); text-align: center; }
+.srow input { width: 100%; box-sizing: border-box; min-height: 48px; font: 600 1.25rem var(--f-display); text-align: center; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); font-variant-numeric: tabular-nums; }
+.srow input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px var(--soft); }
+.ex-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; background: var(--soft); border-radius: 10px; padding: 8px; }
+.chip { border: 1px solid transparent; background: var(--surface); border-radius: 999px; padding: 8px 14px; min-height: 40px; font-weight: 500; font-variant-numeric: tabular-nums; }
+.chip[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+.add-ex { border: 2px dashed var(--line); background: transparent; color: var(--accent); font-weight: 700; }
+.empty { text-align: center; padding: 28px 12px; color: var(--muted); }
+
+/* timer bar */
+#timerbar { position: fixed; inset: auto 0 0 0; z-index: 8; background: var(--ink); color: var(--bg); padding-bottom: env(safe-area-inset-bottom, 0px); }
+#timerbar .in { max-width: 640px; margin: 0 auto; display: flex; align-items: center; gap: 10px; padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+#timerbar .t { font: 800 2rem var(--f-display); font-variant-numeric: tabular-nums; direction: ltr; min-width: 5.2ch; text-align: center; }
+#timerbar .grow { flex: 1; min-width: 0; }
+#timerbar .grow div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#timerbar .btn { background: transparent; color: var(--bg); border-color: color-mix(in srgb, var(--bg) 35%, transparent); }
+#timerbar.done { background: var(--red); }
+#timerbar .track { height: 4px; background: color-mix(in srgb, var(--bg) 25%, transparent); }
+#timerbar .track i { display: block; height: 100%; background: var(--bg); width: 0; margin-inline-start: auto; }
+
+/* report */
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 10px; text-align: center; }
+.stat b { display: block; font: 800 1.5rem var(--f-display); font-variant-numeric: tabular-nums; }
+.stat:first-child { border-top: 4px solid var(--accent); }
+.stat:nth-child(2) { border-top: 4px solid var(--red); }
+.stat:nth-child(3) { border-top: 4px solid #d9a400; }
+.stat:nth-child(4) { border-top: 4px solid var(--green); }
+.rep-ex { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.rep-ex .line { display: flex; justify-content: space-between; align-items: center; gap: 10px; }
+.rep-sets { display: flex; flex-wrap: wrap; gap: 6px; }
+.rep-sets span { background: var(--chip); border-radius: 8px; padding: 4px 10px; font-variant-numeric: tabular-nums; }
+.pill { border-radius: 999px; padding: 3px 10px; font-size: .8rem; font-weight: 700; white-space: nowrap; }
+.pill.up { background: var(--green-soft); color: var(--green); }
+.pill.down { background: var(--red-soft); color: var(--red); }
+.pill.same, .pill.new { background: var(--chip); color: var(--muted); }
+.row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.row-actions .btn { flex: 1 1 auto; }
+
+/* modal + picker */
+#modal { position: fixed; inset: 0; z-index: 20; background: rgba(8, 10, 14, .5); display: flex; align-items: flex-end; justify-content: center; }
+.sheet { background: var(--surface); width: 100%; max-width: 640px; max-height: 88%; border-radius: 18px 18px 0 0; display: flex; flex-direction: column; padding-bottom: env(safe-area-inset-bottom, 0px); }
+.sheet .sh-head { padding: 16px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 10px; border-bottom: 1px solid var(--line); }
+.sheet .sh-body { overflow-y: auto; padding: 8px max(16px, env(safe-area-inset-right, 0px)) 16px max(16px, env(safe-area-inset-left, 0px)); display: flex; flex-direction: column; gap: 4px; }
+.sheet.dialog .sh-body { gap: 14px; padding-top: 16px; }
+.sheet input[type="search"] { width: 100%; box-sizing: border-box; min-height: 48px; font: inherit; font-size: 1.05rem; padding: 0 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+.pk-cat { font-family: var(--f-display); font-weight: 700; font-size: .85rem; color: var(--muted); padding: 12px 4px 4px; }
+.pk-item { display: flex; justify-content: space-between; align-items: center; gap: 12px; text-align: start; width: 100%; padding: 11px 10px; min-height: 48px; border: 0; background: transparent; border-radius: 8px; }
+.pk-item:hover, .pk-item:focus-visible { background: var(--soft); }
+.pk-item .en { color: var(--muted); font-size: .85rem; direction: ltr; }
+.pk-item.in-log .he::after { content: " · ביומן"; color: var(--accent); font-size: .8rem; }
+.pk-item.custom { color: var(--accent); font-weight: 700; }
+textarea.copy { width: 100%; box-sizing: border-box; min-height: 200px; font: inherit; border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: var(--bg); color: var(--ink); }
+
+.acct { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.auth { display: flex; flex-direction: column; gap: 8px; }
+.auth label { font-weight: 500; margin-top: 4px; }
+.auth input { min-height: 48px; font: inherit; font-size: 1.05rem; padding: 0 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); text-align: left; }
+.auth .err { color: var(--red); min-height: 1.2em; }
+.auth .ok { color: var(--green); }
+.seg { display: grid; grid-template-columns: 1fr 1fr; background: var(--chip); border-radius: 10px; padding: 4px; gap: 4px; }
+.seg button { border: 0; background: transparent; border-radius: 8px; min-height: 40px; font-weight: 500; }
+.seg button[aria-pressed="true"] { background: var(--surface); font-weight: 700; box-shadow: 0 1px 3px rgba(0, 0, 0, .12); }
+#toast { position: fixed; z-index: 30; left: 50%; transform: translateX(-50%); bottom: calc(96px + env(safe-area-inset-bottom, 0px)); background: var(--ink); color: var(--bg); border-radius: 12px; padding: 10px 16px; display: flex; gap: 14px; align-items: center; max-width: calc(100% - 32px); box-shadow: 0 6px 24px rgba(0, 0, 0, .25); }
+#toast button { background: transparent; border: 0; color: var(--bg); font-weight: 700; text-decoration: underline; padding: 6px; }
+@media (max-width: 420px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } h1 { font-size: 1.6rem; } }
+@media (prefers-reduced-motion: no-preference) { .ex.fresh { animation: pop .35s ease-out; } @keyframes pop { from { background: var(--soft); } } }
+</style>
+
+<div id="app" class="wrap" aria-live="polite"><p class="muted">טוען את היומן…</p></div>
+<div id="timerbar" hidden></div>
+<div id="modal" hidden></div>
+<div id="toast" hidden role="status"></div>
+
+<script>
+'use strict';
+document.documentElement.setAttribute('dir', 'rtl');
+document.documentElement.setAttribute('lang', 'he');
+
+/* ---------- exercise catalogue (from exercises.md) ---------- */
+const CATS = [
+  ['חזה', 'Bench Press|לחיצת חזה;Incline Bench Press|לחיצת חזה בשיפוע חיובי;Decline Bench Press|לחיצת חזה בשיפוע שלילי;Dumbbell Bench Press|לחיצת חזה עם משקולות;Incline Dumbbell Press|לחיצת חזה בשיפוע עם משקולות;Dumbbell Fly|פרפר עם משקולות;Incline Dumbbell Fly|פרפר בשיפוע חיובי;Cable Crossover|קרוס-אובר בכבלים;Cable Fly (Low to High)|פרפר בכבלים מלמטה למעלה;Pec Deck / Machine Fly|פרפר במכונה (פק דק);Chest Press Machine|מכונת לחיצת חזה;Push-Up|שכיבת סמיכה;Incline Push-Up|שכיבת סמיכה בשיפוע;Decline Push-Up|שכיבת סמיכה עם רגליים מוגבהות;Diamond Push-Up|שכיבת סמיכה יהלום;Wide Push-Up|שכיבת סמיכה רחבה;Chest Dips|מקבילים (דגש חזה);Dumbbell Pullover|פולאובר עם משקולת;Svend Press|לחיצת סבנד'],
+  ['גב', 'Pull-Up|מתח;Chin-Up|מתח באחיזה הפוכה;Neutral-Grip Pull-Up|מתח באחיזה ניטרלית;Wide-Grip Pull-Up|מתח באחיזה רחבה;Assisted Pull-Up|מתח בסיוע;Lat Pulldown|פולי עליון;Close-Grip Lat Pulldown|פולי עליון אחיזה צרה;Straight-Arm Pulldown|משיכת ידיים ישרות בפולי;Seated Cable Row|חתירה בישיבה (פולי תחתון);Barbell Row|חתירה בהטיה עם מוט;Pendlay Row|חתירת פנדליי;T-Bar Row|חתירת T;One-Arm Dumbbell Row|חתירה ביד אחת עם משקולת;Chest-Supported Row|חתירה עם תמיכת חזה;Machine Row|מכונת חתירה;Inverted Row|חתירה הפוכה (מתח אוסטרלי);Deadlift|דדליפט;Rack Pull|משיכה מהמתקן;Back Extension|פשיטת גב (היפראקסטנשן);Good Morning|גוד מורנינג;Superman|סופרמן;Face Pull|פייס פול;Shrugs|משיכת כתפיים (טרפזים)'],
+  ['כתפיים', 'Overhead Press|לחיצת כתפיים בעמידה;Seated Dumbbell Shoulder Press|לחיצת כתפיים בישיבה עם משקולות;Arnold Press|לחיצת ארנולד;Shoulder Press Machine|מכונת לחיצת כתפיים;Push Press|פוש פרס;Lateral Raise|הרחקת כתפיים לצדדים;Cable Lateral Raise|הרחקה לצד בכבל;Front Raise|הרמה קדמית;Rear Delt Fly|פרפר אחורי (כתף אחורית);Upright Row|חתירה אנכית;Pike Push-Up|שכיבת סמיכה בפייק;Handstand Push-Up|שכיבת סמיכה בעמידת ידיים;External Rotation|סיבוב חיצוני;Internal Rotation|סיבוב פנימי;Band Pull-Apart|פתיחת גומייה'],
+  ['יד קדמית', 'Barbell Curl|כפיפת מרפקים עם מוט;EZ-Bar Curl|כפיפת מרפקים במוט W;Dumbbell Curl|כפיפת מרפקים עם משקולות;Hammer Curl|כפיפת פטישים;Incline Dumbbell Curl|כפיפת מרפקים בשיפוע;Concentration Curl|כפיפת ריכוז;Preacher Curl|כפיפה בספסל סקוט;Cable Curl|כפיפת מרפקים בכבל;Spider Curl|כפיפת עכביש;Reverse Curl|כפיפה באחיזה הפוכה;Zottman Curl|כפיפת זוטמן'],
+  ['יד אחורית', 'Triceps Pushdown|פשיטת מרפקים בפולי;Rope Pushdown|פשיטת מרפקים עם חבל;Overhead Triceps Extension|פשיטת מרפקים מעל הראש;Skull Crusher|מגהץ;Close-Grip Bench Press|לחיצת חזה באחיזה צרה;Triceps Dips|מקבילים (דגש יד אחורית);Bench Dips|שקיעות על ספסל;Triceps Kickback|פשיטת מרפק לאחור (קיקבק);JM Press|לחיצת JM'],
+  ['אמות ואחיזה', 'Wrist Curl|כפיפת שורש כף היד;Reverse Wrist Curl|פשיטת שורש כף היד;Farmer\'s Walk|הליכת חקלאי;Dead Hang|תלייה סטטית על מתח;Plate Pinch|צביטת צלחות;Wrist Roller|גלגלת שורש כף היד'],
+  ['רגליים – ארבע ראשי', 'Back Squat|סקוואט;Front Squat|סקוואט קדמי;Goblet Squat|סקוואט גביע;Bodyweight Squat|סקוואט במשקל גוף;Box Squat|סקוואט לקופסה;Hack Squat|האק סקוואט;Smith Machine Squat|סקוואט במכונת סמית\';Leg Press|לחיצת רגליים;Leg Extension|פשיטת ברכיים;Lunge|מכרע (לאנג\');Walking Lunge|מכרע בהליכה;Reverse Lunge|מכרע לאחור;Lateral Lunge|מכרע צידי;Bulgarian Split Squat|סקוואט בולגרי;Step-Up|עלייה על ספסל;Pistol Squat|סקוואט על רגל אחת (פיסטול);Sissy Squat|סיסי סקוואט;Wall Sit|ישיבה על הקיר;Jump Squat|סקוואט קפיצה'],
+  ['ירך אחורית וישבן', 'Romanian Deadlift|דדליפט רומני;Stiff-Leg Deadlift|דדליפט ברגליים ישרות;Sumo Deadlift|דדליפט סומו;Single-Leg Romanian Deadlift|דדליפט רומני על רגל אחת;Lying Leg Curl|כפיפת ברכיים בשכיבה;Seated Leg Curl|כפיפת ברכיים בישיבה;Nordic Hamstring Curl|כפיפה נורדית;Hip Thrust|היפ תראסט;Glute Bridge|גשר ישבן;Single-Leg Glute Bridge|גשר ישבן על רגל אחת;Cable Kickback|בעיטה לאחור בכבל;Donkey Kick|בעיטת חמור;Fire Hydrant|ברז כיבוי;Hip Abduction Machine|מכונת הרחקת ירכיים;Hip Adduction Machine|מכונת קירוב ירכיים;Clamshell|צדפה;Kettlebell Swing|סווינג קטלבל'],
+  ['שוקיים', 'Standing Calf Raise|הרמת עקבים בעמידה;Seated Calf Raise|הרמת עקבים בישיבה;Single-Leg Calf Raise|הרמת עקבים על רגל אחת;Leg Press Calf Raise|הרמת עקבים במכונת לחיצת רגליים;Tibialis Raise|הרמת קדמת השוק'],
+  ['בטן וליבה', 'Crunch|כפיפות בטן;Sit-Up|בטן מלאה (סיט-אפ);Plank|פלאנק;Side Plank|פלאנק צידי;Hanging Leg Raise|הרמת רגליים בתלייה;Hanging Knee Raise|הרמת ברכיים בתלייה;Lying Leg Raise|הרמת רגליים בשכיבה;Reverse Crunch|כפיפות בטן הפוכות;Bicycle Crunch|אופניים;Russian Twist|סיבובים רוסיים;Mountain Climber|מטפס הרים;Dead Bug|חיפושית מתה;Bird Dog|ציפור-כלב;Hollow Body Hold|החזקת גוף חלול;V-Up|V-אפ (סכין);Ab Wheel Rollout|גלגלת בטן;Cable Crunch|כפיפות בטן בכבל;Pallof Press|לחיצת פאלוף;Woodchopper|חוטב עצים;L-Sit|ישיבת L;Toes to Bar|בהונות למוט;Flutter Kicks|בעיטות מספריים'],
+  ['כל הגוף ופונקציונלי', 'Burpee|ברפי;Clean|הנפה (קלין);Power Clean|הנפת כוח (פאוור קלין);Clean and Jerk|הנפה ודחיקה;Snatch|חטיפה (סנאץ\');Thruster|ת\'ראסטר;Kettlebell Snatch|חטיפה עם קטלבל;Turkish Get-Up|קימה טורקית;Wall Ball|זריקת כדור לקיר;Medicine Ball Slam|הטחת כדור כוח;Box Jump|קפיצה על קופסה;Battle Ropes|חבלי קרב;Sled Push|דחיפת מזחלת;Tire Flip|הפיכת צמיג;Bear Crawl|זחילת דוב;Muscle-Up|עליית כוח (מאסל-אפ);Jumping Jacks|קפיצות פיסוק;High Knees|ברכיים גבוהות'],
+  ['אירובי', 'Running|ריצה;Treadmill|הליכון;Walking|הליכה;Incline Walk|הליכה בשיפוע;Cycling|רכיבה על אופניים;Stationary Bike|אופני כושר;Spinning|ספינינג;Rowing Machine|מכונת חתירה (ארגומטר);Elliptical|אליפטיקל;Stair Climber|מדרגות (סטפר);Jump Rope|קפיצה בחבל;Swimming|שחייה;HIIT|אימון אינטרוולים;Sprints|ספרינטים'],
+  ['גמישות וניידות', 'Hamstring Stretch|מתיחת ירך אחורית;Quad Stretch|מתיחת ארבע ראשי;Hip Flexor Stretch|מתיחת מכופפי ירך;Pigeon Pose|תנוחת היונה;Child\'s Pose|תנוחת הילד;Cat-Cow|חתול-פרה;Downward Dog|כלב מביט למטה;Cobra Stretch|מתיחת קוברה;World\'s Greatest Stretch|המתיחה הטובה בעולם;Thoracic Rotation|סיבוב גב עליון;Shoulder Dislocates|סיבובי כתפיים עם מקל;Foam Rolling|גלילה בפוֹם רולר;Calf Stretch|מתיחת שוקיים;Butterfly Stretch|מתיחת פרפר']
+];
+const EX = [];
+for (const [cat, list] of CATS) for (const p of list.split(';')) { const [en, he] = p.split('|'); EX.push({ key: en, en, he, cat }); }
+const EXBY = Object.fromEntries(EX.map(e => [e.key, e]));
+
+/* ---------- helpers ---------- */
+const $ = (s, r = document) => r.querySelector(s);
+function h(tag, attrs, ...kids) {
+  const el = document.createElement(tag);
+  if (attrs) for (const [k, v] of Object.entries(attrs)) {
+    if (v == null || v === false) continue;
+    if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else if (k === 'class') el.className = v;
+    else if (k === 'html') el.innerHTML = v;   // only for static icon markup
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of kids.flat(Infinity)) { if (c == null || c === false) continue; el.append(c.nodeType ? c : String(c)); }
+  return el;
+}
+const clone = o => JSON.parse(JSON.stringify(o));
+const uid = () => Math.random().toString(36).slice(2, 10);
+const num = s => { const n = parseFloat(String(s == null ? '' : s).replace(',', '.')); return isFinite(n) ? n : NaN; };
+const fmtN = n => (n == null || n === '' || isNaN(n)) ? '' : String(Math.round(n * 100) / 100);
+const norm = s => String(s).toLowerCase().replace(/[֑-ׇ"'׳״()\-–]/g, '').replace(/\s+/g, ' ').trim();
+const pad = n => String(n).padStart(2, '0');
+function clock(ms) { const s = Math.max(0, Math.floor(ms / 1000)), hh = Math.floor(s / 3600), mm = Math.floor(s / 60) % 60, ss = s % 60; return (hh ? hh + ':' + pad(mm) : mm) + ':' + pad(ss); }
+function secLabel(s) { return s < 60 ? s + ' שנ׳' : Math.floor(s / 60) + ':' + pad(s % 60); }
+const dayFmt = new Intl.DateTimeFormat('he-IL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+const timeFmt = new Intl.DateTimeFormat('he-IL', { hour: '2-digit', minute: '2-digit' });
+const monFmt = new Intl.DateTimeFormat('he-IL', { month: 'short' });
+const wdFmt = new Intl.DateTimeFormat('he-IL', { weekday: 'short' });
+function minutes(ms) { const m = Math.round(ms / 60000); return m < 60 ? m + ' דק׳' : Math.floor(m / 60) + ' ש׳ ' + (m % 60) + ' דק׳'; }
+const ICON = {
+  timer: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9 2h6"/></svg>',
+  trash: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>',
+  x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  plus: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>',
+  pause: '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>',
+  play: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 5v14l12-7z"/></svg>',
+  again: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 12a8 8 0 1 0 3-6.2M4 4v4h4"/></svg>'
+};
+const icon = name => h('span', { 'aria-hidden': 'true', style: 'display:inline-flex', html: ICON[name] });
+
+/* ---------- state ---------- */
+const S = { loaded: false, slow: false, history: [], current: null, view: 'home', reportStart: null, timerOpen: null, fresh: null };
+let mode = 'local', DB = null, UID = null;
+const LS_KEY = 'gymlog-v1';
+
+/* ---------- storage: private rows in the viewer's Claude account, a Firebase account (website build), or this browser ---------- */
+let AUTH = null, FS = null, CLOUD_USER = null, authEpoch = 0;
+async function initStore() {
+  if (window.TZ_CLOUD) {
+    if (window.firebase) return initCloud();
+    S.fatal = 'לא הצלחנו להתחבר לשרת. בדקו את החיבור לאינטרנט ורעננו את הדף.'; S.loaded = true; render(); return;
+  }
+  const c = window.claude;
+  if (c && typeof c.use === 'function') {
+    try {
+      const [d, u] = await Promise.all([c.use('db'), c.use('user')]);
+      const id = u ? await u.id() : null;
+      if (d && id) { DB = d; UID = id; mode = 'db'; return loadDb(); }
+    } catch (e) { /* fall through to local */ }
+  }
+  useLocal();
+}
+async function loadDb() {
+  const timer = setTimeout(() => { if (!S.loaded) { S.slow = true; render(); } }, 10000);
+  try {
+    const snap = await DB.collection('data/users/' + UID).get();
+    readDocs(snap.docs);
+  } catch (e) { S.loadError = true; }
+  clearTimeout(timer); S.loaded = true; S.slow = false; render();
+}
+function readDocs(docs) {
+  const hist = []; let cur = null;
+  for (const d of docs) {
+    const data = d.data(); if (!data) continue;
+    if (d.id === 'gym-current') cur = data;
+    else if (d.id.startsWith('gym-w-')) hist.push(data);
+  }
+  S.history = hist.filter(validWorkout).sort((a, b) => b.start - a.start);
+  S.current = cur && validWorkout(cur) ? clone(cur) : null;
+}
+/* Website build: email + password accounts (the same accounts as the צלחת site). Rows: users/<uid>/docs/gym-… */
+const cloudCol = () => FS.collection('users').doc(CLOUD_USER.uid).collection('docs');
+function initCloud() {
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(window.TZ_CLOUD);
+    AUTH = firebase.auth(); FS = firebase.firestore();
+    FS.enablePersistence({ synchronizeTabs: true }).catch(() => {});   // works offline in the installed app
+  } catch (e) { S.fatal = 'החיבור לשרת נכשל. רעננו את הדף.'; S.loaded = true; render(); return; }
+  mode = 'cloud';
+  AUTH.onAuthStateChanged(async user => {
+    const epoch = ++authEpoch;
+    clearTimeout(curTimer); stopTimer(); closeModal();
+    Object.assign(S, { history: [], current: null, loaded: false, slow: false, loadError: false, view: 'home', needLogin: false });
+    CLOUD_USER = user;
+    if (!user) { S.needLogin = true; S.loaded = true; render(); return; }
+    render();
+    const timer = setTimeout(() => { if (!S.loaded && epoch === authEpoch) { S.slow = true; render(); } }, 10000);
+    try {
+      const id = firebase.firestore.FieldPath.documentId();
+      const snap = await cloudCol().where(id, '>=', 'gym-').where(id, '<', 'gym.').get();
+      if (epoch !== authEpoch) return;
+      readDocs(snap.docs);
+    } catch (e) { if (epoch === authEpoch) S.loadError = true; }
+    clearTimeout(timer);
+    if (epoch === authEpoch) { S.loaded = true; S.slow = false; render(); }
+  });
+}
+async function signOutCloud() {
+  if (S.current) saveCurrent(true);
+  try { await AUTH.signOut(); } catch (e) { toast('ההתנתקות לא הצליחה. נסו שוב.'); }
+}
+function authError(e) {
+  const c = (e && e.code) || '';
+  return ({
+    'auth/invalid-email': 'המייל לא תקין.',
+    'auth/invalid-credential': 'המייל או הסיסמה לא נכונים.',
+    'auth/wrong-password': 'המייל או הסיסמה לא נכונים.',
+    'auth/user-not-found': 'המייל או הסיסמה לא נכונים.',
+    'auth/missing-password': 'צריך סיסמה.',
+    'auth/weak-password': 'הסיסמה קצרה מדי. צריך לפחות 6 תווים.',
+    'auth/email-already-in-use': 'כבר יש חשבון עם המייל הזה. היכנסו עם הסיסמה שלו.',
+    'auth/too-many-requests': 'יותר מדי ניסיונות. חכו כמה דקות ונסו שוב.',
+    'auth/network-request-failed': 'אין חיבור לאינטרנט.'
+  })[c] || 'משהו השתבש. נסו שוב.';
+}
+function validWorkout(w) { return w && typeof w.start === 'number' && Array.isArray(w.items); }
+function useLocal() {
+  mode = 'local';
+  try {
+    const o = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
+    if (o) { S.history = (o.history || []).filter(validWorkout).sort((a, b) => b.start - a.start); S.current = validWorkout(o.current) ? o.current : null; }
+  } catch (e) { /* storage blocked: start empty */ }
+  S.loaded = true; render();
+}
+function saveLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify({ history: S.history, current: S.current })); } catch (e) { /* ignore */ } }
+const writes = {};
+function save(docId, body) {
+  if (mode === 'local') return saveLocal();
+  if (mode === 'cloud') {
+    // Firestore queues writes locally (also offline) and keeps their order, so no queue of our own is needed.
+    if (!CLOUD_USER) return;
+    const ref = cloudCol().doc(docId);
+    (body ? ref.set(clone(body)) : ref.delete()).catch(e => toast(e && e.code === 'permission-denied' ? 'אין הרשאה לשמור. התחברו מחדש.' : 'השמירה לא הצליחה. נסו שוב בעוד רגע.'));
+    return;
+  }
+  const w = writes[docId] || (writes[docId] = { busy: false, pending: false, body: null });
+  w.body = body ? clone(body) : null; w.pending = true;
+  if (!w.busy) flush(docId);
+}
+async function flush(docId) {
+  const w = writes[docId]; w.busy = true;
+  while (w.pending) {
+    w.pending = false;
+    const body = w.body, ref = DB.doc('data/users/' + UID + '/' + docId);
+    try { if (body) await ref.set(body); else await ref.delete(); }
+    catch (e) { toast('השמירה לא הצליחה. נסו שוב בעוד רגע.'); }
+  }
+  w.busy = false;
+}
+let curTimer = null;
+function saveCurrent(now) {
+  clearTimeout(curTimer);
+  const go = () => save('gym-current', S.current);
+  if (now) go(); else curTimer = setTimeout(go, 600);
+}
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && S.current) saveCurrent(true); else if (document.visibilityState === 'visible' && S.view === 'log') keepAwake(); });
+
+/* ---------- workout logic ---------- */
+function lastItem(key, before = Infinity) {
+  for (const w of S.history) { if (w.start >= before) continue; const it = w.items.find(i => i.key === key); if (it) return { it, w }; }
+  return null;
+}
+function openLog() {
+  if (!S.current) {
+    const prev = S.history[0];
+    S.current = { start: Date.now(), items: prev ? prev.items.map(it => ({ uid: uid(), key: it.key, he: it.he, en: it.en, cat: it.cat, tsec: it.tsec || 0, sets: it.sets.map(s => ({ w: fmtN(s.w), r: fmtN(s.r) })) })) : [] };
+    saveCurrent(true);
+  }
+  go('log'); keepAwake();
+}
+function addExercise(ex) {
+  const last = lastItem(ex.key), s0 = last && last.it.sets[0];
+  const item = { uid: uid(), key: ex.key, he: ex.he, en: ex.en || '', cat: ex.cat, tsec: last ? (last.it.tsec || 0) : 0, sets: [{ w: s0 ? fmtN(s0.w) : '', r: s0 ? fmtN(s0.r) : '' }] };
+  S.current.items.push(item); S.fresh = item.uid; saveCurrent(); closeModal(); render();
+  const el = document.getElementById('ex-' + item.uid);
+  if (el) { const inp = el.querySelector('input'); if (inp) inp.focus({ preventScroll: true }); el.scrollIntoView({ block: 'center' }); }
+}
+function addSet(item) {
+  const n = item.sets.length, last = lastItem(item.key, S.current.start);
+  const base = (last && last.it.sets[n]) ? { w: fmtN(last.it.sets[n].w), r: fmtN(last.it.sets[n].r) } : { ...(item.sets[n - 1] || { w: '', r: '' }) };
+  item.sets.push(base); saveCurrent(); render();
+  requestAnimationFrame(() => { const el = document.getElementById(`w-${item.uid}-${n}`); if (el) el.focus(); });
+}
+function finishWorkout() {
+  const items = S.current.items.map(it => ({ key: it.key, he: it.he, en: it.en, cat: it.cat, tsec: it.tsec || 0,
+    sets: it.sets.map(s => ({ w: num(s.w), r: num(s.r) })).filter(s => (s.r > 0) || (s.w > 0)).map(s => ({ w: s.w > 0 ? s.w : 0, r: s.r > 0 ? s.r : 0 })) }))
+    .filter(it => it.sets.length);
+  if (!items.length) {
+    dialog('אין מה לשמור עדיין', [h('p', { style: 'margin:0' }, 'לא מילאת משקל או חזרות באף סט. מלא לפחות סט אחד, או בטל את האימון.')], [{ label: 'הבנתי', cls: 'primary', fn: closeModal }]);
+    return;
+  }
+  const w = { start: S.current.start, end: Date.now(), items };
+  S.history = [w, ...S.history.filter(x => x.start !== w.start)].sort((a, b) => b.start - a.start);
+  S.current = null; clearTimeout(curTimer);
+  save('gym-w-' + w.start, w); save('gym-current', null);
+  stopTimer(); releaseWake(); closeModal();
+  S.reportStart = w.start; go('report');
+}
+function cancelWorkout() {
+  S.current = null; clearTimeout(curTimer); save('gym-current', null);
+  stopTimer(); releaseWake(); closeModal(); go('home'); toast('האימון בוטל');
+}
+function stats(w) { let sets = 0, reps = 0, vol = 0; for (const it of w.items) for (const s of it.sets) { sets++; reps += s.r; vol += s.w * s.r; } return { ex: w.items.length, sets, reps, vol: Math.round(vol) }; }
+function best(sets) { return sets.reduce((b, s) => (!b || s.w > b.w || (s.w === b.w && s.r > b.r)) ? s : b, null); }
+function compare(it, w) {
+  const prev = lastItem(it.key, w.start);
+  if (!prev) return { kind: 'new', text: 'פעם ראשונה' };
+  const b = best(it.sets), pb = best(prev.it.sets);
+  if (b.w > pb.w) return { kind: 'up', text: `+${fmtN(b.w - pb.w)} ק״ג` };
+  if (b.w < pb.w) return { kind: 'down', text: `−${fmtN(pb.w - b.w)} ק״ג` };
+  if (b.r > pb.r) return { kind: 'up', text: `+${b.r - pb.r} חזרות` };
+  if (b.r < pb.r) return { kind: 'down', text: `−${pb.r - b.r} חזרות` };
+  return { kind: 'same', text: 'כמו בפעם הקודמת' };
+}
+const setText = s => s.w > 0 ? `${fmtN(s.w)} ק״ג × ${fmtN(s.r)}` : `${fmtN(s.r)} חזרות`;
+function reportText(w) {
+  const st = stats(w), lines = [`אימון – ${dayFmt.format(w.start)}`, `${timeFmt.format(w.start)}–${timeFmt.format(w.end)} (${minutes(w.end - w.start)})`,
+    `${st.ex} תרגילים · ${st.sets} סטים · ${st.reps} חזרות · נפח ${st.vol.toLocaleString('he-IL')} ק״ג`, ''];
+  for (const it of w.items) { lines.push(it.he + (it.en ? ` (${it.en})` : '')); it.sets.forEach((s, i) => lines.push(`  סט ${i + 1}: ${s.w > 0 ? fmtN(s.w) + ' ק״ג, ' : ''}${fmtN(s.r)} חזרות`)); }
+  return lines.join('\n');
+}
+
+/* ---------- rest timer ---------- */
+let T = null, AC = null;
+function audioOn() { try { AC = AC || new (window.AudioContext || window.webkitAudioContext)(); if (AC.state === 'suspended') AC.resume(); } catch (e) { AC = null; } }
+function beep() {
+  try { if (navigator.vibrate) navigator.vibrate([250, 120, 250, 120, 250]); } catch (e) { /* ignore */ }
+  if (!AC) return;
+  [0, .35, .7].forEach(t => { const o = AC.createOscillator(), g = AC.createGain(), at = AC.currentTime + t;
+    o.frequency.value = 880; g.gain.setValueAtTime(.0001, at); g.gain.exponentialRampToValueAtTime(.35, at + .02); g.gain.exponentialRampToValueAtTime(.0001, at + .28);
+    o.connect(g).connect(AC.destination); o.start(at); o.stop(at + .3); });
+}
+function startTimer(item, secs) { audioOn(); T = { uid: item.uid, label: item.he, total: secs, acc: 0, base: Date.now(), running: true, done: false }; drawTimerBar(); }
+function stopTimer() { T = null; drawTimerBar(); }
+const tElapsed = () => T.acc + (T.running ? Date.now() - T.base : 0);
+function drawTimerBar() {
+  const bar = $('#timerbar');
+  if (!T || S.view !== 'log') { bar.hidden = true; bar.replaceChildren(); return; }
+  bar.hidden = false; bar.classList.toggle('done', T.done);
+  const toggle = () => { if (T.running) { T.acc = tElapsed(); T.running = false; } else { audioOn(); T.base = Date.now(); T.running = true; } drawTimerBar(); };
+  const restart = () => { audioOn(); T.acc = 0; T.base = Date.now(); T.running = true; T.done = false; drawTimerBar(); };
+  bar.replaceChildren(
+    T.total ? h('div', { class: 'track' }, h('i', { id: 'tb-fill' })) : null,
+    h('div', { class: 'in' },
+      h('div', { class: 'grow' }, h('div', { class: 'small' }, T.done ? 'זמן המנוחה נגמר' : (T.total ? 'מנוחה' : 'סטופר')), h('div', null, h('b', null, T.label))),
+      h('div', { class: 't', id: 'tb-time' }, ''),
+      T.done ? null : h('button', { class: 'btn icon', type: 'button', 'aria-label': T.running ? 'השהה' : 'המשך', onclick: toggle }, icon(T.running ? 'pause' : 'play')),
+      h('button', { class: 'btn icon', type: 'button', 'aria-label': 'התחל מחדש', onclick: restart }, icon('again')),
+      h('button', { class: 'btn icon', type: 'button', 'aria-label': 'סגור טיימר', onclick: stopTimer }, icon('x'))));
+  tick();
+}
+function tick() {
+  const c = $('#clock'); if (c && S.current) c.textContent = clock(Date.now() - S.current.start);
+  if (!T) return;
+  const el = $('#tb-time'), e = tElapsed();
+  if (T.total) {
+    const left = T.total * 1000 - e;
+    if (left <= 0 && !T.done) { T.done = true; T.running = false; T.acc = T.total * 1000; beep(); drawTimerBar(); return; }
+    if (el) el.textContent = clock(left + 999);
+    const f = $('#tb-fill'); if (f) f.style.width = Math.min(100, e / (T.total * 10)) + '%';
+  } else if (el) el.textContent = clock(e);
+}
+setInterval(tick, 250);
+let wake = null;
+async function keepAwake() { try { if (navigator.wakeLock && !wake) { wake = await navigator.wakeLock.request('screen'); wake.addEventListener('release', () => { wake = null; }); } } catch (e) { wake = null; } }
+function releaseWake() { try { if (wake) wake.release(); } catch (e) { /* ignore */ } wake = null; }
+
+/* ---------- UI: shared ---------- */
+let toastT = null;
+function toast(msg, action) {
+  const t = $('#toast'); clearTimeout(toastT);
+  t.replaceChildren(h('span', null, msg), action ? h('button', { type: 'button', onclick: () => { t.hidden = true; action.fn(); } }, action.label) : null);
+  t.hidden = false; toastT = setTimeout(() => { t.hidden = true; }, action ? 6000 : 2600);
+}
+function closeModal() { const m = $('#modal'); m.hidden = true; m.replaceChildren(); }
+function openSheet(sheet, focusSel) {
+  const m = $('#modal'); m.replaceChildren(sheet); m.hidden = false;
+  m.onclick = e => { if (e.target === m) closeModal(); };
+  requestAnimationFrame(() => { const f = focusSel && sheet.querySelector(focusSel); if (f) f.focus(); });
+}
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#modal').hidden) closeModal(); });
+function dialog(title, body, actions) {
+  openSheet(h('div', { class: 'sheet dialog', role: 'dialog', 'aria-modal': 'true', 'aria-label': title },
+    h('div', { class: 'sh-body' }, h('h2', null, title), body,
+      h('div', { class: 'row-actions' }, actions.map(a => h('button', { type: 'button', class: 'btn ' + (a.cls || ''), onclick: a.fn }, a.label))))), '.btn');
+}
+function go(view) { S.view = view; S.timerOpen = null; render(); window.scrollTo(0, 0); }
+function render() {
+  const app = $('#app');
+  if (S.fatal) { app.replaceChildren(h('header', { class: 'hero' }, plates(), h('h1', null, 'יומן כושר')), h('p', { class: 'start-card', role: 'alert' }, S.fatal)); return; }
+  if (!S.loaded) { app.replaceChildren(h('p', { class: 'muted' }, S.slow ? 'הטעינה לוקחת יותר זמן מהרגיל. היומן ייפתח כשהנתונים יגיעו.' : 'טוען את היומן…')); return; }
+  if (S.needLogin) { app.replaceChildren(...renderLogin()); drawTimerBar(); return; }
+  const v =S.view === 'log' && S.current ? renderLog() : S.view === 'report' ? renderReport() : renderHome();
+  app.replaceChildren(...v);
+  drawTimerBar();
+  S.fresh = null;
+}
+
+/* ---------- home ---------- */
+function plates() { return h('div', { class: 'plates', 'aria-hidden': 'true' }, [['#c42d26', 26], ['#1d4ccc', 24], ['#d9a400', 20], ['#1b7a45', 16]].map(([c, ht]) => h('i', { style: `background:${c};height:${ht}px` }))); }
+function renderHome() {
+  const prev = S.history[0], out = [];
+  out.push(h('header', { class: 'hero' }, plates(), h('h1', null, 'יומן כושר'),
+    h('p', { class: 'muted', style: 'margin:0' }, 'רושמים משקל וחזרות לכל סט, והיומן זוכר מה עשית בפעם הקודמת.')));
+  if (S.loadError) out.push(h('p', { class: 'start-card', role: 'alert' }, 'לא הצלחנו לקרוא את היומן מהחשבון. רעננו את הדף בעוד רגע.'));
+  const card = h('section', { class: 'start-card' });
+  if (S.current) {
+    card.append(h('h2', null, 'יש אימון פתוח'),
+      h('p', { class: 'muted', style: 'margin:0' }, `התחיל ב-${timeFmt.format(S.current.start)} · ${S.current.items.length} תרגילים ביומן`),
+      h('button', { class: 'btn primary big', type: 'button', onclick: openLog }, 'המשך את היומן'));
+  } else {
+    card.append(h('button', { class: 'btn primary big', type: 'button', onclick: openLog }, 'פתח יומן'),
+      h('p', { class: 'muted small', style: 'margin:0' }, prev
+        ? `ייפתח עם ${prev.items.length} התרגילים מהאימון של ${dayFmt.format(prev.start)}, עם המשקלים והחזרות מאז.`
+        : 'האימון הראשון שלך. אחרי שתוסיף תרגילים, הם יופיעו אוטומטית בפעם הבאה.'));
+  }
+  out.push(card);
+  if (S.history.length) {
+    out.push(h('h2', { style: 'margin-top:8px' }, 'אימונים קודמים'));
+    out.push(h('div', { class: 'history' }, S.history.map(w => {
+      const st = stats(w), d = new Date(w.start);
+      return h('button', { class: 'hrow', type: 'button', onclick: () => { S.reportStart = w.start; go('report'); } },
+        h('div', { class: 'date' }, h('span', { class: 'small muted' }, wdFmt.format(d)), h('b', { class: 'num' }, d.getDate()), h('span', { class: 'small' }, monFmt.format(d))),
+        h('div', { style: 'min-width:0' }, h('div', { class: 'names' }, w.items.map(i => i.he).join(' · ')),
+          h('div', { class: 'small muted num' }, `${st.ex} תרגילים · ${st.sets} סטים · ${minutes(w.end - w.start)}`)),
+        h('div', { class: 'num small muted', style: 'text-align:center' }, h('b', { style: 'display:block;font-size:1rem;color:var(--ink)' }, st.vol.toLocaleString('he-IL')), 'ק״ג נפח'));
+    })));
+  }
+  if (mode === 'cloud') {
+    out.push(h('div', { class: 'acct' },
+      h('p', { class: 'muted small', style: 'margin:0' }, 'מחובר/ת בתור ', h('b', { dir: 'ltr' }, (CLOUD_USER && CLOUD_USER.email) || ''), '. היומן נשמר בחשבון ומסתנכרן בין הטלפון למחשב.'),
+      h('button', { class: 'btn ghost', type: 'button', onclick: signOutCloud }, 'התנתקות')));
+  } else {
+    out.push(h('p', { class: 'muted small', style: 'margin:8px 0 0' }, mode === 'db' ? 'היומן נשמר בחשבון Claude שלך, ורק את/ה רואה אותו.' : 'היומן נשמר בדפדפן הזה בלבד.'));
+  }
+  return out;
+}
+
+/* ---------- sign in (website build) ---------- */
+function renderLogin() {
+  let signup = false, email0 = '';
+  const card = h('section', { class: 'start-card' });
+  const draw = msg => {
+    const err = h('div', { class: 'err', role: 'alert' }, (msg && msg.err) || '');
+    const email = h('input', { type: 'email', id: 'au-email', autocomplete: 'username', inputmode: 'email', dir: 'ltr', value: email0 });
+    const pass = h('input', { type: 'password', id: 'au-pass', autocomplete: signup ? 'new-password' : 'current-password', dir: 'ltr' });
+    const pass2 = signup ? h('input', { type: 'password', id: 'au-pass2', autocomplete: 'new-password', dir: 'ltr' }) : null;
+    const switchTo = v => () => { signup = v; email0 = email.value.trim(); draw(); };
+    const form = h('form', { class: 'auth', novalidate: true },
+      h('div', { class: 'seg', role: 'group', 'aria-label': 'כניסה או הרשמה' },
+        h('button', { type: 'button', 'aria-pressed': String(!signup), onclick: switchTo(false) }, 'כניסה'),
+        h('button', { type: 'button', 'aria-pressed': String(signup), onclick: switchTo(true) }, 'הרשמה')),
+      h('label', { for: 'au-email' }, 'מייל'), email,
+      h('label', { for: 'au-pass' }, 'סיסמה', signup ? h('span', { class: 'muted small' }, ' (לפחות 6 תווים)') : null), pass,
+      pass2 ? [h('label', { for: 'au-pass2' }, 'הסיסמה שוב'), pass2] : null,
+      err,
+      msg && msg.ok ? h('div', { class: 'ok' }, msg.ok) : null,
+      h('button', { type: 'submit', class: 'btn primary big' }, signup ? 'הרשמה' : 'כניסה'),
+      signup ? null : h('button', { type: 'button', class: 'btn ghost', onclick: async () => {
+        email0 = email.value.trim();
+        if (!email0) { draw({ err: 'כתבו את המייל שלכם, ואז לחצו שוב על "שכחתי סיסמה".' }); return; }
+        try { await AUTH.sendPasswordResetEmail(email0); draw({ ok: 'אם יש חשבון עם המייל הזה, נשלח אליו קישור לבחירת סיסמה חדשה.' }); }
+        catch (e) { draw({ err: authError(e) }); }
+      } }, 'שכחתי סיסמה'));
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const em = email.value.trim(), pw = pass.value; email0 = em;
+      if (!em || !pw) { err.textContent = 'צריך מייל וסיסמה.'; return; }
+      if (signup && pw !== pass2.value) { err.textContent = 'הסיסמאות לא זהות.'; return; }
+      const btn = form.querySelector('button[type=submit]'); btn.disabled = true; err.textContent = '';
+      try { if (signup) await AUTH.createUserWithEmailAndPassword(em, pw); else await AUTH.signInWithEmailAndPassword(em, pw); }
+      catch (ex) { err.textContent = authError(ex); btn.disabled = false; }
+    });
+    card.replaceChildren(h('h2', null, signup ? 'הרשמה' : 'כניסה'),
+      h('p', { style: 'margin:0' }, 'יש לך חשבון בצלחת? אפשר להיכנס איתו. האימונים נשמרים בענן ומסתנכרנים בין הטלפון למחשב.'),
+      form,
+      h('p', { class: 'muted small', style: 'margin:0' }, 'החשבונות והנתונים נשמרים בשירות Firebase של Google, בפרויקט של מי שמפעיל את האתר. למפעיל האתר יש גישה טכנית לנתונים.'));
+  };
+  draw();
+  return [h('header', { class: 'hero' }, plates(), h('h1', null, 'יומן כושר'),
+    h('p', { class: 'muted', style: 'margin:0' }, 'רושמים משקל וחזרות לכל סט, והיומן זוכר מה עשית בפעם הקודמת.')), card];
+}
+
+/* ---------- log ---------- */
+function renderLog() {
+  const cur = S.current, out = [];
+  out.push(h('div', { class: 'topbar' },
+    h('button', { class: 'btn ghost', type: 'button', onclick: () => { saveCurrent(true); go('home'); } }, 'ראשי'),
+    h('div', { class: 'grow' }, h('div', { class: 'label' }, 'זמן אימון'), h('div', { class: 'clock num', id: 'clock' }, clock(Date.now() - cur.start))),
+    h('button', { class: 'btn primary', type: 'button', onclick: confirmFinish }, 'סיום')));
+  if (!cur.items.length) out.push(h('div', { class: 'empty' }, h('h3', null, 'היומן ריק'), h('p', null, 'הוסף את התרגיל הראשון באימון.')));
+  cur.items.forEach((it, idx) => out.push(renderExercise(it, idx)));
+  out.push(h('button', { class: 'btn big add-ex', type: 'button', onclick: openPicker }, icon('plus'), 'הוסף תרגיל'));
+  out.push(h('button', { class: 'btn ghost', type: 'button', style: 'align-self:center', onclick: () => dialog('לבטל את האימון?', [h('p', { style: 'margin:0' }, 'מה שרשמת באימון הזה לא יישמר. אימונים קודמים לא ייפגעו.')],
+    [{ label: 'בטל אימון', cls: 'danger', fn: cancelWorkout }, { label: 'חזרה ליומן', fn: closeModal }]) }, 'בטל אימון'));
+  return out;
+}
+function renderExercise(it, idx) {
+  const last = lastItem(it.key, S.current.start);
+  const removeEx = () => {
+    const pos = S.current.items.indexOf(it); if (pos < 0) return;
+    S.current.items.splice(pos, 1); if (T && T.uid === it.uid) stopTimer(); saveCurrent(); render();
+    toast(`${it.he} הוסר`, { label: 'בטל', fn: () => { S.current.items.splice(pos, 0, it); saveCurrent(); render(); } });
+  };
+  const card = h('section', { class: 'ex' + (S.fresh === it.uid ? ' fresh' : ''), id: 'ex-' + it.uid, 'aria-label': it.he },
+    h('div', { class: 'ex-head' },
+      h('div', { class: 'grow' }, h('h3', null, it.he), it.en ? h('div', { class: 'en' }, it.en) : null),
+      h('button', { class: 'btn icon', type: 'button', 'aria-label': 'טיימר ל' + it.he, 'aria-expanded': String(S.timerOpen === it.uid), style: S.timerOpen === it.uid || (T && T.uid === it.uid) ? 'color:var(--accent)' : null,
+        onclick: () => { S.timerOpen = S.timerOpen === it.uid ? null : it.uid; render(); } }, icon('timer')),
+      h('button', { class: 'btn icon', type: 'button', 'aria-label': 'הסר את ' + it.he, onclick: removeEx }, icon('trash'))),
+    last ? h('div', { class: 'prev' }, 'פעם קודמת: ', last.it.sets.map((s, i) => [i ? ' · ' : '', h('span', null, s.w > 0 ? `${fmtN(s.w)}×${fmtN(s.r)}` : `${fmtN(s.r)} חז׳`)])) : h('div', { class: 'prev' }, 'תרגיל חדש ביומן'));
+  if (S.timerOpen === it.uid) {
+    const opts = [30, 60, 90, 120, 180, 0];
+    card.append(h('div', { class: 'chips', role: 'group', 'aria-label': 'בחירת טיימר' },
+      opts.map(s => h('button', { type: 'button', class: 'chip', 'aria-pressed': String((it.tsec || 0) === s && (s > 0 || it.tsec === 0)),
+        onclick: () => { it.tsec = s; saveCurrent(); S.timerOpen = null; startTimer(it, s); render(); } }, s ? secLabel(s) : 'סטופר'))));
+  }
+  const sets = h('div', { class: 'sets' }, h('div', { class: 'srow head', 'aria-hidden': 'true' }, h('span', { style: 'text-align:center' }, 'סט'), h('span', { style: 'text-align:center' }, 'משקל (ק״ג)'), h('span', { style: 'text-align:center' }, 'חזרות'), h('span')));
+  it.sets.forEach((s, j) => {
+    const inp = (field, label) => h('input', { id: `${field}-${it.uid}-${j}`, type: 'text', inputmode: 'decimal', autocomplete: 'off', dir: 'ltr', value: s[field], 'aria-label': `${label}, סט ${j + 1}, ${it.he}`, placeholder: '0',
+      oninput: e => { s[field] = e.target.value.replace(/[^\d.,]/g, ''); if (e.target.value !== s[field]) e.target.value = s[field]; saveCurrent(); },
+      onfocus: e => e.target.select() });
+    sets.append(h('div', { class: 'srow' }, h('span', { class: 'n num' }, j + 1), inp('w', 'משקל'), inp('r', 'חזרות'),
+      it.sets.length > 1 ? h('button', { class: 'btn icon', type: 'button', 'aria-label': `מחק סט ${j + 1}`, onclick: () => { it.sets.splice(j, 1); saveCurrent(); render(); } }, icon('x')) : h('span')));
+  });
+  card.append(sets, h('div', { class: 'ex-actions' },
+    h('button', { class: 'btn', type: 'button', onclick: () => addSet(it) }, icon('plus'), 'הוסף סט'),
+    it.tsec > 0 ? h('button', { class: 'btn', type: 'button', onclick: () => { startTimer(it, it.tsec); } }, icon('timer'), 'מנוחה ' + secLabel(it.tsec)) : null));
+  return card;
+}
+function confirmFinish() {
+  const filled = S.current.items.reduce((n, it) => n + it.sets.filter(s => num(s.r) > 0 || num(s.w) > 0).length, 0);
+  dialog('לסיים את האימון?', [h('p', { style: 'margin:0' }, `${S.current.items.length} תרגילים, ${filled} סטים עם נתונים. סטים ריקים לא ייכנסו לדו״ח.`)],
+    [{ label: 'סיום והצגת דו״ח', cls: 'primary', fn: finishWorkout }, { label: 'חזרה ליומן', fn: closeModal }]);
+}
+
+/* ---------- exercise picker ---------- */
+function openPicker() {
+  const inLog = new Set(S.current.items.map(i => i.key));
+  const recent = []; const seen = new Set();
+  for (const w of S.history) for (const it of w.items) if (!seen.has(it.key)) { seen.add(it.key); recent.push(EXBY[it.key] || { key: it.key, he: it.he, en: it.en, cat: it.cat || 'אחר' }); }
+  const q = h('input', { type: 'search', id: 'pk-q', placeholder: 'חיפוש בעברית או באנגלית, למשל מתח', autocomplete: 'off', 'aria-label': 'חיפוש תרגיל' });
+  const body = h('div', { class: 'sh-body' });
+  const item = ex => h('button', { type: 'button', class: 'pk-item' + (inLog.has(ex.key) ? ' in-log' : ''), onclick: () => addExercise(ex) },
+    h('span', { class: 'he' }, ex.he), ex.en ? h('span', { class: 'en' }, ex.en) : null);
+  const draw = () => {
+    const t = norm(q.value), kids = [];
+    if (!t) {
+      if (recent.length) { kids.push(h('div', { class: 'pk-cat' }, 'עשית לאחרונה')); recent.slice(0, 12).forEach(e => kids.push(item(e))); }
+      for (const [cat] of CATS) { kids.push(h('div', { class: 'pk-cat' }, cat)); EX.filter(e => e.cat === cat).forEach(e => kids.push(item(e))); }
+    } else {
+      const pool = [...EX, ...recent.filter(r => !EXBY[r.key])];
+      const hits = pool.filter(e => norm(e.he + ' ' + e.en).includes(t));
+      hits.slice(0, 60).forEach(e => kids.push(item(e)));
+      const name = q.value.trim();
+      if (!pool.some(e => norm(e.he) === t)) kids.push(h('button', { type: 'button', class: 'pk-item custom', onclick: () => addExercise({ key: 'custom:' + name, he: name, en: '', cat: 'אחר' }) }, `הוסף "${name}" כתרגיל חדש`));
+      if (!hits.length) kids.unshift(h('p', { class: 'muted small', style: 'margin:8px 4px' }, 'לא נמצא תרגיל בשם הזה ברשימה.'));
+    }
+    body.replaceChildren(...kids); body.scrollTop = 0;
+  };
+  q.addEventListener('input', draw);
+  q.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); const first = body.querySelector('.pk-item'); if (first) first.click(); } });
+  draw();
+  openSheet(h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'הוספת תרגיל' },
+    h('div', { class: 'sh-head' }, h('div', { style: 'display:flex;align-items:center;justify-content:space-between' }, h('h2', null, 'הוספת תרגיל'),
+      h('button', { class: 'btn icon', type: 'button', 'aria-label': 'סגור', onclick: closeModal }, icon('x'))), q), body), '#pk-q');
+}
+
+/* ---------- report ---------- */
+function renderReport() {
+  const w = S.history.find(x => x.start === S.reportStart);
+  if (!w) { S.view = 'home'; return renderHome(); }
+  const st = stats(w), out = [];
+  out.push(h('div', { class: 'topbar' }, h('button', { class: 'btn ghost', type: 'button', onclick: () => go('home') }, 'ראשי'),
+    h('div', { class: 'grow' }, h('div', { class: 'label' }, 'דו״ח אימון'), h('div', { style: 'font-weight:700' }, dayFmt.format(w.start)))));
+  out.push(h('p', { class: 'muted num', style: 'margin:0' }, h('span', { dir: 'ltr' }, `${timeFmt.format(w.start)}–${timeFmt.format(w.end)}`), ` · ${minutes(w.end - w.start)}`));
+  out.push(h('div', { class: 'stats' },
+    [[st.ex, 'תרגילים'], [st.sets, 'סטים'], [st.reps, 'חזרות'], [st.vol.toLocaleString('he-IL'), 'ק״ג נפח']].map(([v, l]) => h('div', { class: 'stat' }, h('b', null, v), h('span', { class: 'small muted' }, l)))));
+  for (const it of w.items) {
+    const c = compare(it, w), vol = it.sets.reduce((a, s) => a + s.w * s.r, 0);
+    out.push(h('section', { class: 'rep-ex' },
+      h('div', { class: 'line' }, h('div', { style: 'min-width:0' }, h('h3', null, it.he), it.en ? h('div', { class: 'small muted', style: 'direction:ltr;text-align:right' }, it.en) : null),
+        h('span', { class: 'pill ' + c.kind }, c.text)),
+      h('div', { class: 'rep-sets' }, it.sets.map(s => h('span', null, setText(s)))),
+      vol > 0 ? h('div', { class: 'small muted num' }, `נפח: ${Math.round(vol).toLocaleString('he-IL')} ק״ג`) : null));
+  }
+  out.push(h('p', { class: 'muted small', style: 'margin:0' }, 'נפח = משקל × חזרות, מחובר על כל הסטים. ההשוואה היא לסט הכבד ביותר בפעם הקודמת שעשית את התרגיל.'));
+  const copy = async () => {
+    const text = reportText(w);
+    try { await navigator.clipboard.writeText(text); toast('הדו״ח הועתק'); }
+    catch (e) { const ta = h('textarea', { class: 'copy', readonly: true, 'aria-label': 'טקסט הדו״ח' }); ta.value = text;
+      dialog('העתקת הדו״ח', [h('p', { style: 'margin:0' }, 'סמן את הטקסט והעתק אותו.'), ta], [{ label: 'סגור', fn: closeModal }]); requestAnimationFrame(() => ta.select()); }
+  };
+  out.push(h('div', { class: 'row-actions' },
+    h('button', { class: 'btn primary', type: 'button', onclick: copy }, 'העתק דו״ח'),
+    h('button', { class: 'btn', type: 'button', onclick: () => go('home') }, 'חזרה לראשי'),
+    h('button', { class: 'btn danger', type: 'button', onclick: () => dialog('למחוק את האימון?', [h('p', { style: 'margin:0' }, `האימון מ${dayFmt.format(w.start)} יימחק מהיומן לצמיתות.`)],
+      [{ label: 'מחק', cls: 'danger', fn: () => { S.history = S.history.filter(x => x.start !== w.start); save('gym-w-' + w.start, null); closeModal(); go('home'); toast('האימון נמחק'); } }, { label: 'ביטול', fn: closeModal }]) }, 'מחק אימון')));
+  return out;
+}
+
+initStore();
+</script>
+
+<script>if('serviceWorker' in navigator){addEventListener('load',function(){navigator.serviceWorker.register('sw.js').catch(function(){})})}</script>
+</body></html>
