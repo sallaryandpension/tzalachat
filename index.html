@@ -75,7 +75,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   backdrop-filter: saturate(1.4) blur(10px); -webkit-backdrop-filter: saturate(1.4) blur(10px); border-bottom: 1px solid var(--line); }
 .top-inner, .wrap { max-width: 760px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 .top-inner { display: flex; align-items: center; gap: 12px; min-height: 60px; padding-block: 8px; }
-.brand { display: flex; align-items: center; gap: 8px; font-family: var(--f-display); font-weight: 700; font-size: 22px; color: var(--accent-ink); letter-spacing: -0.01em; }
+.brand { display: flex; align-items: center; gap: 8px; font-family: var(--f-display); font-weight: 700; font-size: 22px; color: var(--accent-ink); letter-spacing: -0.01em; text-decoration: none; border-radius: 10px; }
 .brand svg { width: 30px; height: 30px; color: var(--accent); }
 .tabs { display: flex; gap: 2px; margin-inline-start: auto; background: var(--surface-2); padding: 4px; border-radius: 14px; }
 .tabs a { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; color: var(--ink-2); padding: 8px 12px; min-height: 40px; border-radius: 10px; font-weight: 500; font-size: var(--fs-s); }
@@ -95,7 +95,7 @@ body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-a
   .top { backdrop-filter: none; -webkit-backdrop-filter: none; background: var(--surface); }   /* a backdrop filter would trap the fixed tab bar inside the header */
   .top-inner { min-height: 56px; }
   .user-btn { margin-inline-start: auto; }
-  .tabs { position: fixed; inset: auto 0 0 0; z-index: 9; display: grid; grid-template-columns: repeat(5, 1fr); gap: 0; margin: 0; border-radius: 0;
+  .tabs { position: fixed; inset: auto 0 0 0; z-index: 9; display: grid; grid-template-columns: repeat(6, 1fr); gap: 0; margin: 0; border-radius: 0;
     background: var(--surface); border-top: 1px solid var(--line); box-shadow: 0 -4px 16px rgba(17, 28, 24, 0.06);
     padding: 6px max(6px, env(safe-area-inset-right, 0px)) calc(6px + env(safe-area-inset-bottom, 0px)) max(6px, env(safe-area-inset-left, 0px)); }
   .tabs a { flex-direction: column; justify-content: center; gap: 2px; min-height: 54px; padding: 4px 2px; font-size: 12px; color: var(--muted); border-radius: 12px; }
@@ -404,6 +404,49 @@ fieldset.field { border: 0; margin: 0; padding: 0; min-width: 0; }
   display: flex; align-items: center; gap: 14px; background: var(--ink); color: var(--bg); padding: 12px 18px; border-radius: var(--r-s); font-size: var(--fs-s); box-shadow: var(--shadow-lift); max-width: calc(100% - 32px); }
 .toast-act { background: none; border: 0; padding: 4px; color: inherit; font-weight: 700; text-decoration: underline; text-underline-offset: 3px; }
 
+/* Entry screen: four areas as tiles; sub-screens open with a back row */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.home-head { display: grid; gap: 2px; padding-top: 4px; }
+.hub { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.tile { display: flex; flex-direction: column; gap: 4px; min-width: 0; min-height: 150px; padding: 16px; border-radius: var(--r); background: var(--surface); border: 1px solid var(--line);
+  box-shadow: var(--shadow); color: var(--ink); text-decoration: none; transition: border-color .15s ease, transform .15s ease; }
+.tile:hover { border-color: var(--line-strong); }
+.tile:active { transform: translateY(1px); }
+.tile.wide { grid-column: 1 / -1; min-height: 0; }
+.tile-ic { width: 44px; height: 44px; border-radius: 13px; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-ink); margin-bottom: 6px; }
+.tile-ic svg { width: 24px; height: 24px; }
+.tile-t { font-family: var(--f-display); font-weight: 600; font-size: var(--fs-l); }
+.tile-big { font-family: var(--f-display); font-weight: 600; font-size: var(--fs-m); }
+.tile-sub { color: var(--muted); font-size: var(--fs-s); }
+.tile .bar { margin-top: auto; height: 8px; }
+.tile:first-child { background: var(--hero); color: var(--hero-ink); border-color: transparent; }
+.tile:first-child .tile-ic { background: var(--hero-chip); color: var(--hero-ring); }
+.tile:first-child .tile-sub { color: var(--hero-muted); }
+.tile:first-child .bar { background: var(--hero-track); }
+.tile:first-child .bar > span { background: var(--hero-ring); }
+.tile:first-child:focus-visible { outline-color: var(--accent); }
+.screen-head { display: flex; align-items: center; gap: 12px; }
+.screen-head h1 { font-size: var(--fs-2xl); }
+.screen-head .icon-btn { text-decoration: none; }
+.act-link { display: flex; align-items: center; gap: 12px; text-decoration: none; color: var(--ink); padding: 14px 16px; }
+.act-link:hover { border-color: var(--line-strong); }
+.act-link .ttl { flex: 1; min-width: 0; display: grid; }
+.act-link > .ico { color: var(--muted); }
+.wk-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.wk-list li { display: grid; grid-template-columns: 3.2rem minmax(0, 1fr) 4.2rem 3.6rem; gap: 10px; align-items: center; font-size: var(--fs-s); }
+.wk-v { text-align: end; }
+.ov-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.ov-box { background: var(--surface-2); border-radius: var(--r-s); padding: 12px; display: grid; gap: 2px; min-width: 0; }
+.ov-box b { font-family: var(--f-display); font-size: var(--fs-xl); font-weight: 600; }
+.ov-l { font-size: var(--fs-s); font-weight: 600; }
+.ov-scroll { overflow-x: auto; margin-inline: -4px; }
+.ov-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.ov-table th, .ov-table td { padding: 8px 3px; text-align: start; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.ov-table .chip { padding: 2px 6px; }
+.ov-table thead th { color: var(--muted); font-weight: 600; font-size: var(--fs-xs); }
+.ov-table tbody th { font-weight: 600; }
+@media (min-width: 720px) { .hub { grid-template-columns: repeat(4, minmax(0, 1fr)); } .tile.wide { grid-column: auto; min-height: 150px; } .ov-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+
 @media (prefers-reduced-motion: no-preference) {
   .bar > span, .hero-bar > span { transition: width 0.45s cubic-bezier(.2, .8, .2, 1); }
   .ring .prog { transition: stroke-dashoffset 0.6s cubic-bezier(.2, .8, .2, 1); }
@@ -416,11 +459,12 @@ fieldset.field { border: 0; margin: 0; padding: 0; min-width: 0; }
   <a class="skip" href="#view" id="skip">דילוג לתוכן</a>
   <header class="top" id="top">
     <div class="top-inner">
-      <div class="brand">
+      <a class="brand" href="#home" aria-label="צלחת, למסך הבית">
         <svg viewBox="0 0 32 32" aria-hidden="true"><circle cx="16" cy="16" r="13" fill="none" stroke="currentColor" stroke-width="2.6"/><circle cx="16" cy="16" r="7.5" fill="currentColor" opacity="0.18"/><path d="M16 8.5a7.5 7.5 0 0 1 7.5 7.5H16z" fill="currentColor"/></svg>
         <span>צלחת</span>
-      </div>
+      </a>
       <nav class="tabs" id="tabs" aria-label="תצוגות" hidden>
+        <a href="#home" data-view="home"><span>בית</span></a>
         <a href="#today" data-view="today"><span>היום</span></a>
         <a href="#week" data-view="week"><span>שבוע</span></a>
         <a href="#month" data-view="month"><span>חודש</span></a>
@@ -529,6 +573,11 @@ function s(tag, attrs, ...kids) {
 }
 /* Line icons (24 × 24, drawn with the current text colour). */
 const ICONS = {
+  home: 'M4 10.5L12 4l8 6.5V19a1 1 0 0 1-1 1h-4.5v-5.5h-5V20H5a1 1 0 0 1-1-1z',
+  gym: 'M3 12h18M6.5 8v8M9.5 6.5v11M14.5 6.5v11M17.5 8v8',
+  run: 'M12.5 5.5a1.8 1.8 0 1 0 3.6 0a1.8 1.8 0 1 0-3.6 0M7 21l3-5.5 3.5 2.5v4M6 11l3.5-3.5 4 1.2 2.2 3.3H19M10 8.5l-1.2 5 4.7 4.5',
+  grid: 'M4 4h7v7H4zM13 4h7v4h-7zM13 10h7v10h-7zM4 13h7v7H4z',
+  food: 'M7 3v8M5 3v5a2 2 0 0 0 4 0V3M7 11v10M16.5 3c-1.9 0-3 2.4-3 5.5 0 2.2 1.2 3.5 2.2 3.8V21M16.5 3v18',
   today: 'M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4M8 12a4 4 0 1 0 8 0a4 4 0 1 0-8 0',
   week: 'M5 20v-7M10 20V9M15 20v-5M20 20V5M3 20h18',
   month: 'M4 8a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v10a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3zM4 10h16M8.5 3v4M15.5 3v4M8 14h2M14 14h2M8 17.5h2',
@@ -610,6 +659,7 @@ function installCard() {
 const state = {
   mode: 'loading', loaded: false, slow: false, readonly: false, dbError: null,
   all: {}, pid: null, newUser: false,   // every user's data by user id; pid = who is using the app now
+  gym: [],   // finished workouts from the gym log, account-wide (website only)
   common: [], tz: [], tzLoaded: false, tzLoading: null, foodsError: false, commonCodes: new Set(),
   view: 'today', date: todayStr(), weekOff: 0, monthOff: 0, demo: { week: false, month: false }
 };
@@ -657,7 +707,7 @@ function enterUser(pid) {
   closeSheet();
   Object.assign(state, { pid, newUser: false, date: todayStr(), weekOff: 0, monthOff: 0, demo: { week: false, month: false } });
   indexCustom(); rememberPid(pid);
-  if (location.hash !== '#today') location.hash = '#today'; else render();
+  if (location.hash !== '#home') location.hash = '#home'; else render();
   window.scrollTo(0, 0);
   setTimeout(migrateProfile, 0);
 }
@@ -770,7 +820,7 @@ const cloudCol = () => FS.collection('users').doc(CLOUD_USER.uid).collection('do
 function resetData() {
   writeEpoch++;
   for (const k of Object.keys(writes)) delete writes[k];
-  Object.assign(state, { all: {}, pid: null, newUser: false, loaded: false, slow: false, readonly: false, dbError: null });
+  Object.assign(state, { all: {}, gym: [], pid: null, newUser: false, loaded: false, slow: false, readonly: false, dbError: null });
   migrated.clear(); indexCustom();
 }
 function initCloud() {
@@ -912,9 +962,11 @@ function subscribe(col) {
   const timer = setTimeout(() => { if (!state.loaded) { state.slow = true; render(); } }, 10000);
   return col.onSnapshot(snap => {
     if (!state.loaded && snap.metadata.fromCache && snap.empty) return;   // wait for the store before choosing a user
-    const all = {};
+    const all = {}, gym = [];
     for (const d of snap.docs) {
-      const data = d.data(), info = parseDocId(d.id); if (!data || !info) continue;
+      const data = d.data();
+      if (data && d.id.startsWith('gym-w-')) { gym.push(data); continue; }   // finished workouts from the gym log (same account)
+      const info = parseDocId(d.id); if (!data || !info) continue;
       const b = all[info.pid] || (all[info.pid] = blank());
       if (info.kind === 'profile') b.profile = clone(data);
       else if (info.kind === 'custom') b.custom = clone(data.foods || []);
@@ -933,6 +985,7 @@ function subscribe(col) {
     }
     if (state.pid && state.newUser && !all[state.pid]) all[state.pid] = state.all[state.pid] || blank();
     state.all = all;
+    state.gym = gym.filter(w => w && typeof w.start === 'number' && Array.isArray(w.items)).sort((a, b) => b.start - a.start);
     const first = !state.loaded; state.loaded = true;
     if (first) state.pid = pickInitialPid();
     else if (state.pid && !state.newUser && !(all[state.pid] && all[state.pid].profile)) state.pid = null;   // user removed elsewhere
@@ -959,7 +1012,7 @@ function bodyFor(docId) {
   if (info.kind === 'custom') return { foods: b.custom.map(({ id, name, v, serv }) => ({ id, name, v, serv: serv || null })) };
   if (info.kind === 'weights') return { list: b.weights || [] };
   const day = b.days[info.date];
-  return day && (day.entries.length || day.steps) ? day : null;
+  return dayHas(day) ? day : null;
 }
 async function flush(docId) {
   const w = writes[docId]; w.busy = true;
@@ -1054,16 +1107,18 @@ function findFoodFor(entry) {
 
 /* ---------- day data ---------- */
 function getDay(date) { return state.days[date] || { date, entries: [] }; }
-function setDay(date, entries) {
-  const steps = state.days[date] && state.days[date].steps;
-  if (entries.length || steps) state.days[date] = steps ? { date, entries, steps } : { date, entries }; else delete state.days[date];
+// A day document holds food entries, steps and aerobic sessions; it is kept while any of them has something.
+const dayHas = d => !!d && ((d.entries && d.entries.length) || d.steps > 0 || (d.cardio && d.cardio.length));
+function putDay(date, d) {
+  const n = { date, entries: d.entries || [] };
+  if (d.steps > 0) n.steps = d.steps;
+  if (d.cardio && d.cardio.length) n.cardio = d.cardio;
+  if (dayHas(n)) state.days[date] = n; else delete state.days[date];
   persist(did('day-' + date));
 }
-function setSteps(date, steps) {
-  const entries = (state.days[date] && state.days[date].entries) || [];
-  if (steps > 0) state.days[date] = { date, entries, steps }; else if (entries.length) state.days[date] = { date, entries }; else delete state.days[date];
-  persist(did('day-' + date));
-}
+function setDay(date, entries) { putDay(date, { ...getDay(date), entries }); }
+function setSteps(date, steps) { putDay(date, { ...getDay(date), steps }); }
+function setCardio(date, cardio) { putDay(date, { ...getDay(date), cardio }); }
 // Walking estimate: stride from height, and the net cost of walking, about 0.5 kcal per kg per km (ACSM walking equation).
 function stepsBurn(steps, p) {
   const km = steps * (p.height / 100) * (p.sex === 'm' ? 0.415 : 0.413) / 1000;
@@ -1073,7 +1128,7 @@ function stepsBurn(steps, p) {
 /* ---------- routing ---------- */
 function route() {
   const v = (location.hash || '').slice(1);
-  const next = ['today', 'week', 'month', 'weight', 'profile'].includes(v) ? v : 'today';
+  const next = ['home', 'today', 'cardio', 'overview', 'week', 'month', 'weight', 'profile'].includes(v) ? v : 'home';
   const changed = next !== state.view;
   state.view = next;
   render();
@@ -1105,8 +1160,9 @@ function render() {
   const me = displayName({ id: state.pid, name: state.profile.name });
   $('#user-name').textContent = me; $('#user-initial').textContent = me.charAt(0); $('#user-initial').className = 'avatar sm ' + avClass(state.pid);
   ub.setAttribute('aria-label', 'יציאה מהמשתמש ' + me);
+  const tabView = state.view === 'cardio' || state.view === 'overview' ? 'home' : state.view;   // sub-screens of the entry screen
   for (const a of tabs.querySelectorAll('a')) {
-    if (a.dataset.view === state.view) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
+    if (a.dataset.view === tabView) a.setAttribute('aria-current', 'page'); else a.removeAttribute('aria-current');
   }
   if (state.view === 'today' && !state.readonly) {
     fab.hidden = false; fab.setAttribute('aria-label', 'הוספת מזון ל' + MEAL_NAME[guessMeal()]);
@@ -1115,7 +1171,10 @@ function render() {
   if (state.dbError) kids.push(h('div', { class: 'notice bad' }, 'אין גישה לנתונים השמורים כרגע. רעננו את הדף מאוחר יותר.'));
   if (state.readonly) kids.push(h('div', { class: 'notice warn' }, 'בתצוגה הזו אי אפשר לשמור שינויים.'));
   if (state.slow) kids.push(h('div', { class: 'notice warn' }, 'ייתכן שהנתונים אינם מעודכנים. ממתין לחיבור…'));
-  if (state.view === 'today') { const ic = installCard(); if (ic) kids.push(ic); kids.push(...renderToday()); }
+  if (state.view === 'home') { const ic = installCard(); if (ic) kids.push(ic); kids.push(...renderHome()); }
+  else if (state.view === 'cardio') kids.push(...renderCardio());
+  else if (state.view === 'overview') kids.push(...renderOverview());
+  else if (state.view === 'today') kids.push(...renderToday());
   else if (state.view === 'week') kids.push(...renderPeriod('week'));
   else if (state.view === 'month') kids.push(...renderPeriod('month'));
   else if (state.view === 'weight') kids.push(...renderWeight());
@@ -1224,7 +1283,7 @@ function renderToday() {
     }
     out.push(card);
   }
-  out.push(stepsCard(date, isToday));
+  out.push(activityLink(date));
   return out;
 }
 /* The day at a glance: a calorie ring with what is left, protein against its target, and the macro split. */
@@ -1295,6 +1354,208 @@ function stepsCard(date, isToday) {
       h('div', { class: 'bar' }, h('span', { style: `width:${clamp(steps / goal * 100, 0, 100)}%;background:var(--steps)` }))) : null,
     state.readonly ? null : form,
     h('p', { class: 'muted small', style: 'margin:0' }, 'מקלידים את המספר מאפליקציית הצעדים. הקלוריות הן הערכה, והן לא מתווספות ליעד: רמת הפעילות בפרופיל כבר כוללת את התנועה הרגילה שלך.'));
+}
+/* ---------- ENTRY SCREEN: nutrition / gym / aerobic / overview ---------- */
+// Aerobic sessions: MET values for light / moderate / vigorous, from the Compendium of Physical Activities (rounded).
+const CARDIO = [
+  ['walk', 'הליכה', [3.0, 3.8, 5.0]], ['run', 'ריצה', [7.0, 9.8, 11.5]], ['bike', 'אופניים', [4.0, 6.8, 10.0]], ['spin', 'ספינינג', [5.5, 8.5, 10.5]],
+  ['swim', 'שחייה', [5.8, 7.0, 9.8]], ['ellip', 'אליפטיקל', [4.6, 5.0, 6.5]], ['row', 'חתירה', [4.8, 7.0, 8.5]], ['rope', 'קפיצה בחבל', [8.3, 11.0, 12.3]],
+  ['hike', 'טיול רגלי', [5.3, 6.0, 7.8]], ['other', 'אחר', [3.5, 5.0, 7.0]]
+];
+const CARDIO_BY = Object.fromEntries(CARDIO.map(c => [c[0], c]));
+const INTENSITY = ['קל', 'בינוני', 'מאומץ'];
+// Net calories: (MET − 1) × kg × hours. The resting part is already in the daily target, like the walking estimate.
+const cardioKcal = (c, kg) => { const t = CARDIO_BY[c.type] || CARDIO_BY.other; return Math.max(0, (t[2][c.int ?? 1] - 1) * kg * (c.min || 0) / 60); };
+const dayCardio = date => getDay(date).cardio || [];
+// Strength workouts from the gym log: about 5 MET for a typical session (net 4).
+const gymKcal = (w, kg) => Math.max(0, 4 * kg * (w.end - w.start) / 3.6e6);
+const gymVol = w => w.items.reduce((a, it) => a + it.sets.reduce((b, s) => b + (s.w || 0) * (s.r || 0), 0), 0);
+// The gym log keeps workouts per account, so they belong to the account's main user.
+function gymWorkouts() {
+  if (state.pid !== 'main') return null;
+  if (state.mode === 'cloud') return state.gym || [];
+  if (state.mode === 'local') { try { const o = JSON.parse(localStorage.getItem('gymlog-v1') || 'null'); return o && Array.isArray(o.history) ? o.history : []; } catch (e) { return []; } }
+  return null;   // inside Claude the gym log is a separate artifact
+}
+const GYM_ARTIFACT = 'https://claude.ai/artifact/TQhgESJLQk5gNdwvBqddU5';
+const gymHref = () => state.mode === 'db' ? GYM_ARTIFACT : './gym/';
+const dkeyOf = ts => ymd(new Date(ts));
+const relDay = date => { const n = Math.round((parseYmd(todayStr()) - parseYmd(date)) / 864e5); return n === 0 ? 'היום' : n === 1 ? 'אתמול' : `לפני ${n} ימים`; };
+const tons = v => v >= 1000 ? f1(v / 1000) + ' טון' : f0(v) + ' ק"ג';
+function screenHead(title, sub) {
+  return h('div', { class: 'screen-head' },
+    h('a', { class: 'icon-btn', href: '#home', 'aria-label': 'חזרה למסך הבית' }, icon('prev')),
+    h('div', null, h('h1', null, title), sub ? h('p', { class: 'muted small', style: 'margin:0' }, sub) : null));
+}
+function renderHome() {
+  const p = state.profile, date = todayStr(), day = getDay(date), t = totals(day.entries);
+  const hr = new Date().getHours(), hello = hr < 5 ? 'לילה טוב' : hr < 12 ? 'בוקר טוב' : hr < 17 ? 'צהריים טובים' : hr < 21 ? 'ערב טוב' : 'לילה טוב';
+  const name = (p.name || '').trim();
+  const steps = day.steps || 0, cardio = dayCardio(date), cmin = cardio.reduce((a, c) => a + (c.min || 0), 0);
+  const ws = gymWorkouts(), weekAgo = Date.now() - 7 * 864e5, wk = ws ? ws.filter(w => w.start >= weekAgo) : [];
+  const tile = (o) => h('a', { class: 'tile' + (o.wide ? ' wide' : ''), href: o.href, target: o.ext ? '_blank' : null, rel: o.ext ? 'noopener' : null, 'aria-label': o.label },
+    h('span', { class: 'tile-ic', style: o.color ? `background:color-mix(in srgb, ${o.color} 14%, var(--surface));color:${o.color}` : null }, icon(o.icon)),
+    h('span', { class: 'tile-t' }, o.title), h('span', { class: 'tile-big num' }, o.big), o.sub ? h('span', { class: 'tile-sub num' }, o.sub) : null,
+    o.bar != null ? h('span', { class: 'bar', 'aria-hidden': 'true' }, h('span', { style: `width:${clamp(o.bar, 0, 100)}%;${o.barColor ? 'background:' + o.barColor : ''}` })) : null);
+  const kcalPct = t.k / p.kcalTarget * 100;
+  const lastGym = ws && ws[0];
+  return [
+    h('header', { class: 'home-head' }, h('h1', null, name ? `${hello}, ${name}` : hello), h('p', { class: 'muted', style: 'margin:0' }, dfLong.format(parseYmd(date)))),
+    h('nav', { class: 'hub', 'aria-label': 'אזורי האפליקציה' },
+      tile({ href: '#today', icon: 'food', title: 'תזונה', big: `${f0(t.k)} / ${f0(p.kcalTarget)} ${KC}`, sub: `חלבון ${f0(t.p)} / ${f0(p.proteinTarget)} ${GR}`, bar: kcalPct, barColor: kcalPct > 100 ? 'var(--bad)' : null,
+        label: `תזונה: ${f0(t.k)} מתוך ${f0(p.kcalTarget)} קלוריות היום` }),
+      tile({ href: gymHref(), ext: state.mode === 'db', icon: 'gym', title: 'חדר כושר', color: 'var(--protein)',
+        big: lastGym ? relDay(dkeyOf(lastGym.start)) : ws ? 'עוד אין אימונים' : 'יומן כושר',
+        sub: ws ? (wk.length ? `${wk.length} אימונים השבוע · ${tons(wk.reduce((a, w) => a + gymVol(w), 0))}` : 'לחיצה פותחת את יומן הכושר') : state.mode === 'db' ? 'נפתח בלשונית חדשה' : 'יומן אימונים, תוכניות והתקדמות',
+        label: 'חדר כושר' + (lastGym ? ', אימון אחרון ' + relDay(dkeyOf(lastGym.start)) : '') }),
+      tile({ href: '#cardio', icon: 'run', title: 'אירובי', color: 'var(--steps)', big: steps ? `${f0(steps)} צעדים` : 'לא נרשמו צעדים',
+        sub: cmin ? `${f0(cmin)} דק׳ אירובי היום` : 'צעדים, ריצה, אופניים ועוד', bar: steps ? steps / (p.stepGoal || 8000) * 100 : null, barColor: 'var(--steps)',
+        label: `אירובי: ${f0(steps)} צעדים ו-${f0(cmin)} דקות היום` }),
+      tile({ href: '#overview', icon: 'grid', title: 'תמונה כללית', color: 'var(--fat)', big: 'היום והשבוע', sub: 'אוכל, פעילות, אימונים ומשקל ביחד', label: 'תמונה כללית: היום והשבוע במבט אחד' }))
+  ];
+}
+/* small link on the nutrition day: activity now lives in Aerobic */
+function activityLink(date) {
+  const steps = getDay(date).steps || 0, cmin = dayCardio(date).reduce((a, c) => a + (c.min || 0), 0);
+  return h('a', { class: 'card act-link', href: '#cardio' },
+    h('span', { class: 'meal-ic', style: 'background:color-mix(in srgb, var(--steps) 14%, var(--surface));color:var(--steps)' }, icon('run')),
+    h('span', { class: 'ttl' }, h('b', null, 'צעדים ואירובי'),
+      h('span', { class: 'muted small num' }, steps || cmin ? [steps ? f0(steps) + ' צעדים' : null, cmin ? f0(cmin) + ' דק׳ אירובי' : null].filter(Boolean).join(' · ') : 'רישום במסך אירובי')),
+    icon('next'));
+}
+let cform = { type: 'walk', int: 1 };
+function renderCardio() {
+  const p = state.profile, date = state.date, isToday = date === todayStr(), list = dayCardio(date);
+  const out = [screenHead('אירובי', 'צעדים ופעילות אירובית. הקלוריות הן הערכה ולא מתווספות ליעד.')];
+  out.push(h('div', { class: 'datebar' },
+    h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'יום קודם', onclick: () => { state.date = addDays(date, -1); render(); } }, icon('prev')),
+    h('div', { class: 'label' }, h('strong', null, isToday ? 'היום' : dfLong.format(parseYmd(date))),
+      isToday ? h('span', { class: 'muted small' }, dfLong.format(parseYmd(date))) : h('button', { class: 'btn ghost small', type: 'button', onclick: () => { state.date = todayStr(); render(); } }, 'חזרה להיום')),
+    h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'יום הבא', disabled: isToday, onclick: () => { state.date = addDays(date, 1); render(); } }, icon('next'))));
+  out.push(stepsCard(date, isToday));
+
+  /* aerobic sessions */
+  const total = list.reduce((a, c) => a + cardioKcal(c, p.weight), 0), mins = list.reduce((a, c) => a + (c.min || 0), 0);
+  const minIn = h('input', { type: 'number', id: 'cd-min', inputmode: 'numeric', min: 1, max: 600, placeholder: 'למשל 30' });
+  const kmIn = h('input', { type: 'number', id: 'cd-km', inputmode: 'decimal', min: 0, max: 300, step: 0.1, placeholder: 'לא חובה' });
+  const form = h('form', { class: 'stack', novalidate: true },
+    h('fieldset', { class: 'field', style: 'border:0;margin:0;padding:0' }, h('legend', null, 'סוג פעילות'),
+      h('div', { class: 'seg', role: 'group', 'aria-label': 'סוג פעילות' }, CARDIO.map(([id, name]) => h('button', { type: 'button', 'aria-pressed': String(cform.type === id), onclick: () => { cform.type = id; render(); setTimeout(() => { const b = $(`[data-k="cd-${id}"]`); if (b) b.focus(); }, 0); }, 'data-k': 'cd-' + id }, name)))),
+    h('fieldset', { class: 'field', style: 'border:0;margin:0;padding:0' }, h('legend', null, 'עצימות'),
+      h('div', { class: 'seg', role: 'group', 'aria-label': 'עצימות' }, INTENSITY.map((n, i) => h('button', { type: 'button', 'aria-pressed': String(cform.int === i), 'data-k': 'ci-' + i, onclick: () => { cform.int = i; render(); setTimeout(() => { const b = $(`[data-k="ci-${i}"]`); if (b) b.focus(); }, 0); } }, n)))),
+    h('div', { class: 'wform' },
+      h('div', { class: 'field' }, h('label', { for: 'cd-min' }, 'דקות'), minIn),
+      h('div', { class: 'field' }, h('label', { for: 'cd-km' }, 'מרחק (ק"מ)'), kmIn),
+      h('button', { type: 'submit', class: 'btn primary' }, icon('plus'), 'הוספה')));
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const min = Math.round(+minIn.value || 0), km = Math.round((+kmIn.value || 0) * 10) / 10;
+    if (min < 1 || min > 600) { toast('כמה דקות? בין 1 ל-600.'); minIn.focus(); return; }
+    const c = { id: uid4(), type: cform.type, min, int: cform.int }; if (km > 0) c.km = km;
+    setCardio(date, list.concat(c)); render();
+    toast(`נוספו ${min} דק׳ ${CARDIO_BY[c.type][1]} · כ-${f0(cardioKcal(c, p.weight))} ${KC}`);
+  });
+  out.push(h('section', { class: 'card stack', 'aria-labelledby': 'cd-h' },
+    h('div', { class: 'meal-head' }, h('span', { class: 'meal-ic', style: 'background:color-mix(in srgb, var(--steps) 14%, var(--surface));color:var(--steps)' }, icon('run')),
+      h('div', { class: 'ttl' }, h('h3', { id: 'cd-h' }, 'פעילות אירובית'),
+        h('span', { class: 'tot num' }, list.length ? `${f0(mins)} דק׳ · כ-${f0(total)} ${KC}` : 'לא נרשמה פעילות'))),
+    list.length ? h('ul', { class: 'entries' }, list.map(c => {
+      const t = CARDIO_BY[c.type] || CARDIO_BY.other;
+      return h('li', { class: 'entry-row' },
+        h('div', { class: 'entry', style: 'cursor:default' }, h('span', { class: 'n' }, t[1]),
+          h('span', { class: 'a num' }, `${f0(c.min)} דק׳` + (c.km ? ` · ${f1(c.km)} ק"מ` : '') + ` · ${INTENSITY[c.int ?? 1]}`),
+          h('span', { class: 'k num' }, `כ-${f0(cardioKcal(c, p.weight))} ${KC}`)),
+        state.readonly ? null : h('div', { class: 'entry-actions' }, h('button', { class: 'icon-btn sm del', type: 'button', 'aria-label': 'הסרת ' + t[1], onclick: () => {
+          const before = list; setCardio(date, list.filter(x => x.id !== c.id)); render();
+          toast(t[1] + ' הוסר', 'ביטול', () => { setCardio(date, before); render(); });
+        } }, icon('trash'))));
+    })) : null,
+    state.readonly ? null : form));
+
+  /* last 7 days */
+  const days = Array.from({ length: 7 }, (_, i) => addDays(date, -i)).reverse();
+  const maxSteps = Math.max(p.stepGoal || 8000, ...days.map(d => getDay(d).steps || 0));
+  out.push(h('section', { class: 'card stack', 'aria-labelledby': 'cw-h' }, h('h3', { id: 'cw-h' }, '7 הימים האחרונים'),
+    h('ul', { class: 'wk-list' }, days.map(d => {
+      const st = getDay(d).steps || 0, cm = dayCardio(d).reduce((a, c) => a + (c.min || 0), 0);
+      return h('li', null, h('span', { class: 'wk-d' }, d === todayStr() ? 'היום' : new Intl.DateTimeFormat('he-IL', { weekday: 'short' }).format(parseYmd(d))),
+        h('span', { class: 'bar', role: 'img', 'aria-label': `${f0(st)} צעדים` }, h('span', { style: `width:${st / maxSteps * 100}%;background:var(--steps)` })),
+        h('span', { class: 'wk-v num' }, st ? f0(st) : '—'), h('span', { class: 'wk-v num muted' }, cm ? f0(cm) + ' דק׳' : ''));
+    }))));
+  return out;
+}
+function renderOverview() {
+  const p = state.profile, date = todayStr(), ws = gymWorkouts();
+  const out = [screenHead('תמונה כללית', 'אוכל, פעילות, אימונים ומשקל במקום אחד.')];
+  const dayInfo = d => {
+    const day = getDay(d), t = totals(day.entries), steps = day.steps || 0, cardio = day.cardio || [];
+    const gw = ws ? ws.filter(w => dkeyOf(w.start) === d) : [];
+    return { d, t, logged: day.entries.length > 0, steps, cmin: cardio.reduce((a, c) => a + (c.min || 0), 0),
+      ckcal: cardio.reduce((a, c) => a + cardioKcal(c, p.weight), 0), skcal: steps ? stepsBurn(steps, p).kcal : 0,
+      gw, gkcal: gw.reduce((a, w) => a + gymKcal(w, p.weight), 0), gvol: gw.reduce((a, w) => a + gymVol(w), 0) };
+  };
+  const today = dayInfo(date);
+  const box = (label, big, sub, color) => h('div', { class: 'ov-box' }, h('span', { class: 'ov-l', style: color ? `color:${color}` : null }, label), h('b', { class: 'num' }, big), sub ? h('span', { class: 'muted small num' }, sub) : null);
+  const act = today.skcal + today.ckcal + today.gkcal;
+  out.push(h('section', { class: 'card stack', 'aria-labelledby': 'ov-t' }, h('h2', { id: 'ov-t' }, 'היום'),
+    h('div', { class: 'ov-grid' },
+      box('אכלת', `${f0(today.t.k)}`, `מתוך ${f0(p.kcalTarget)} ${KC}`, 'var(--accent-ink)'),
+      box('חלבון', `${f0(today.t.p)} ${GR}`, `מתוך ${f0(p.proteinTarget)} ${GR}`, 'var(--protein)'),
+      box('תנועה', today.steps ? f0(today.steps) : '—', `צעדים · ${f0(today.cmin)} דק׳ אירובי`, 'var(--steps)'),
+      box('כוח', today.gw.length ? tons(today.gvol) : '—', ws ? (today.gw.length ? `${today.gw.length} אימון היום` : 'לא היה אימון היום') : 'ביומן הכושר', 'var(--fat)')),
+    act > 0 ? h('p', { class: 'small', style: 'margin:0' }, `הוצאה משוערת מפעילות היום: כ-${f0(act)} ${KC} `,
+      h('span', { class: 'muted' }, `(הליכה ${f0(today.skcal)} · אירובי ${f0(today.ckcal)} · כוח ${f0(today.gkcal)}). זו הערכה, והיא לא משנה את היעד.`)) : null));
+
+  /* week table */
+  const days = Array.from({ length: 7 }, (_, i) => addDays(date, -i));
+  const rows = days.map(dayInfo);
+  const wdf = { format: d => new Intl.DateTimeFormat('he-IL', { weekday: 'narrow' }).format(d) + ' ' + d.getDate() };
+  const kcell = r => {
+    if (!r.logged) return h('td', { class: 'muted' }, '—');
+    const pct = r.t.k / p.kcalTarget, cls = pct > 1.1 ? 'bad' : pct >= .9 ? 'good' : 'info';
+    return h('td', null, h('span', { class: 'chip ' + cls + ' num' }, f0(r.t.k)));
+  };
+  out.push(h('section', { class: 'card stack', 'aria-labelledby': 'ov-w' }, h('h2', { id: 'ov-w' }, 'השבוע'),
+    h('div', { class: 'ov-scroll' }, h('table', { class: 'ov-table' },
+      h('caption', { class: 'sr-only' }, 'שבעת הימים האחרונים: קלוריות, חלבון, צעדים, אירובי ואימוני כוח'),
+      h('thead', null, h('tr', null, ['יום', KC, 'חלבון', 'צעדים', 'אירובי (דק׳)', 'כוח'].map(x => h('th', { scope: 'col' }, x)))),
+      h('tbody', null, rows.map(r => h('tr', null,
+        h('th', { scope: 'row' }, r.d === date ? 'היום' : wdf.format(parseYmd(r.d))),
+        kcell(r),
+        h('td', { class: 'num' + (r.logged ? '' : ' muted') }, r.logged ? f0(r.t.p) : '—'),
+        h('td', { class: 'num' + (r.steps ? '' : ' muted') }, r.steps ? f0(r.steps) : '—'),
+        h('td', { class: 'num' + (r.cmin ? '' : ' muted') }, r.cmin ? f0(r.cmin) + '′' : '—'),
+        h('td', { class: 'num' + (r.gw.length ? '' : ' muted') }, r.gw.length ? (r.gvol >= 1000 ? f1(r.gvol / 1000) + 'ט׳' : '✓') : '—')))))),
+    (() => {
+      const L = rows.filter(r => r.logged), avgK = L.length ? L.reduce((a, r) => a + r.t.k, 0) / L.length : 0;
+      const tSteps = rows.reduce((a, r) => a + r.steps, 0), tC = rows.reduce((a, r) => a + r.cmin, 0), nG = rows.reduce((a, r) => a + r.gw.length, 0);
+      return h('p', { class: 'small', style: 'margin:0' }, [
+        L.length ? `ממוצע ${f0(avgK)} ${KC} ביום ב-${L.length} ימים שנרשמו` : 'לא נרשם אוכל השבוע',
+        `${f0(tSteps)} צעדים`, `${f0(tC)} דק׳ אירובי`, ws ? `${nG} אימוני כוח` : null].filter(Boolean).join(' · ') + '.');
+    })(),
+    h('p', { class: 'muted small', style: 'margin:0' }, 'צבע הקלוריות: ירוק כשהיום בטווח של 10% מהיעד, אדום כשהוא מעל.')));
+
+  /* weight */
+  const wl = (state.weights || []).slice().sort((a, b) => a.date < b.date ? -1 : 1);
+  if (wl.length) {
+    const last = wl[wl.length - 1], ref = wl.filter(x => x.date <= addDays(last.date, -28)).pop() || wl[0];
+    const diff = last.kg - ref.kg;
+    out.push(h('a', { class: 'card act-link', href: '#weight' },
+      h('span', { class: 'meal-ic' }, icon('weight')),
+      h('span', { class: 'ttl' }, h('b', null, `משקל: ${f1(last.kg)} ק"ג`),
+        h('span', { class: 'muted small num' }, ref !== last ? `${diff > 0 ? '+' : diff < 0 ? '−' : ''}${f1(Math.abs(diff))} ק"ג מאז ${dfShort.format(parseYmd(ref.date))}` : 'שקילה אחת עד עכשיו')),
+      icon('next')));
+  }
+  /* gym */
+  if (ws) {
+    const wk = ws.filter(w => w.start >= Date.now() - 7 * 864e5);
+    out.push(h('a', { class: 'card act-link', href: gymHref() },
+      h('span', { class: 'meal-ic', style: 'background:color-mix(in srgb, var(--protein) 14%, var(--surface));color:var(--protein)' }, icon('gym')),
+      h('span', { class: 'ttl' }, h('b', null, 'חדר כושר'),
+        h('span', { class: 'muted small num' }, ws.length ? `${wk.length} אימונים ב-7 ימים · ${tons(wk.reduce((a, w) => a + gymVol(w), 0))} · אחרון ${relDay(dkeyOf(ws[0].start))}` : 'עוד אין אימונים ביומן הכושר')),
+      icon('next')));
+  }
+  return out;
 }
 function removeEntry(date, id) {
   const before = getDay(date).entries, e = before.find(x => x.id === id);
