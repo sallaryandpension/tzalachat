@@ -1,5 +1,5 @@
 // Offline support for the installed gym log (scope ./gym/). build-site.ps1 stamps the version, so every rebuild replaces the cache.
-const VERSION = '20261125021729';
+const VERSION = '20261125022509';
 const CACHE = 'gym-' + VERSION;
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', '../firebase-config.js'];
 

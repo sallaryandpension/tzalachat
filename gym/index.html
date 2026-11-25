@@ -127,7 +127,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .pk-item { display: flex; justify-content: space-between; align-items: center; gap: 12px; text-align: start; width: 100%; padding: 11px 10px; min-height: 48px; border: 0; background: transparent; border-radius: 8px; }
 .pk-item:hover, .pk-item:focus-visible { background: var(--soft); }
 .pk-item .en { color: var(--muted); font-size: .85rem; direction: ltr; }
-.pk-item.in-log .he::after { content: " · ביומן"; color: var(--accent); font-size: .8rem; }
+.pk-item.in-log .he::after { content: " · " attr(data-tag); color: var(--accent); font-size: .8rem; }
 .pk-item.custom { color: var(--accent); font-weight: 700; }
 textarea.copy { width: 100%; box-sizing: border-box; min-height: 200px; font: inherit; border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: var(--bg); color: var(--ink); }
 
@@ -168,6 +168,34 @@ textarea.copy { width: 100%; box-sizing: border-box; min-height: 200px; font: in
 .pill.high { background: var(--red-soft); color: var(--red); }
 .pill.low { background: var(--chip); color: var(--muted); }
 .pill.none { background: transparent; color: var(--muted); border: 1px dashed var(--line); }
+/* plans */
+.plan-btn { border-color: var(--accent); }
+.pf { display: flex; flex-direction: column; gap: 6px; }
+.chips.flat { background: transparent; padding: 0; }
+.chips.flat .chip { border-color: var(--line); }
+.tpl-days { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; background: var(--bg); border-radius: 10px; padding: 10px 12px; }
+.tpl-days ul { margin: 4px 0 0; padding-inline-start: 18px; font-size: .9rem; }
+.pl-name { min-height: 46px; font: 700 1.1rem var(--f-display); padding: 0 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); }
+.pl-day { gap: 8px; }
+.pl-dhead { display: flex; align-items: center; gap: 8px; }
+.pl-dhead input { flex: 1; min-width: 0; min-height: 42px; font: 700 1.05rem var(--f-display); padding: 0 10px; border: 1px solid transparent; border-radius: 8px; background: transparent; color: var(--ink); }
+.pl-dhead input:hover, .pl-dhead input:focus { border-color: var(--line); background: var(--bg); outline: none; }
+.pl-badge { width: 30px; height: 30px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--chip); font-weight: 700; }
+.pl-badge.next { background: var(--accent); color: var(--on-accent); }
+.pl-ex { display: flex; flex-direction: column; gap: 6px; border-top: 1px solid var(--line); padding-top: 8px; }
+.pl-exname { display: flex; gap: 2px; align-items: center; }
+.pl-exname .grow { flex: 1; min-width: 0; }
+.pl-exname .btn.icon { width: 36px; min-height: 36px; }
+.pl-ctl { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.stepper { display: inline-flex; align-items: center; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.stepper button { border: 0; background: var(--bg); width: 34px; min-height: 40px; font-size: 1.2rem; }
+.stepper span { padding: 0 6px; font-weight: 500; white-space: nowrap; }
+.pl-reps { display: inline-flex; align-items: center; gap: 6px; }
+.pl-reps input { width: 64px; min-height: 40px; text-align: center; font: 600 1rem var(--f-display); border: 1px solid var(--line); border-radius: 10px; background: var(--bg); color: var(--ink); }
+.btn.icon:disabled { opacity: .3; cursor: default; }
+.start-opt { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: start; width: 100%; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+.start-opt span { color: var(--muted); }
+.start-opt.primary { border: 2px solid var(--accent); background: var(--soft); }
 .acct { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
 .auth { display: flex; flex-direction: column; gap: 8px; }
 .auth label { font-weight: 500; margin-top: 4px; }
@@ -381,9 +409,11 @@ async function loadDb() {
 }
 function readDocs(docs) {
   const hist = []; let cur = null;
+  S.plan = null;
   for (const d of docs) {
     const data = d.data(); if (!data) continue;
-    if (d.id === 'gym-current') cur = data;
+    if (d.id === 'gym-plan') { if (Array.isArray(data.days)) S.plan = clone(data); }
+    else if (d.id === 'gym-current') cur = data;
     else if (d.id.startsWith('gym-w-')) hist.push(data);
   }
   S.history = hist.filter(validWorkout).sort((a, b) => b.start - a.start);
@@ -401,7 +431,8 @@ function initCloud() {
   AUTH.onAuthStateChanged(async user => {
     const epoch = ++authEpoch;
     clearTimeout(curTimer); stopTimer(); closeModal();
-    Object.assign(S, { history: [], current: null, loaded: false, slow: false, loadError: false, view: 'home', needLogin: false });
+    clearTimeout(planT);
+    Object.assign(S, { history: [], current: null, plan: null, planChoosing: false, loaded: false, slow: false, loadError: false, view: 'home', needLogin: false });
     CLOUD_USER = user;
     if (!user) { S.needLogin = true; S.loaded = true; render(); return; }
     render();
@@ -439,11 +470,11 @@ function useLocal() {
   mode = 'local';
   try {
     const o = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
-    if (o) { S.history = (o.history || []).filter(validWorkout).sort((a, b) => b.start - a.start); S.current = validWorkout(o.current) ? o.current : null; }
+    if (o) { S.history = (o.history || []).filter(validWorkout).sort((a, b) => b.start - a.start); S.current = validWorkout(o.current) ? o.current : null; S.plan = o.plan && Array.isArray(o.plan.days) ? o.plan : null; }
   } catch (e) { /* storage blocked: start empty */ }
   S.loaded = true; render();
 }
-function saveLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify({ history: S.history, current: S.current })); } catch (e) { /* ignore */ } }
+function saveLocal() { try { localStorage.setItem(LS_KEY, JSON.stringify({ history: S.history, current: S.current, plan: S.plan })); } catch (e) { /* ignore */ } }
 const writes = {};
 function save(docId, body) {
   if (mode === 'local') return saveLocal();
@@ -482,12 +513,14 @@ function lastItem(key, before = Infinity) {
   return null;
 }
 function openLog() {
-  if (!S.current) {
-    const prev = S.history[0];
-    S.current = { start: Date.now(), items: prev ? prev.items.map(it => ({ uid: uid(), key: it.key, he: it.he, en: it.en, cat: it.cat, tsec: it.tsec || 0, sets: it.sets.map(s => ({ w: fmtN(s.w), r: fmtN(s.r) })) })) : [] };
-    saveCurrent(true);
-  }
-  go('log'); keepAwake();
+  if (S.current) { go('log'); keepAwake(); return; }
+  if (S.plan && S.plan.days.length) return chooseStart();
+  startFromLast();
+}
+function startFromLast() {
+  const prev = S.history[0];
+  S.current = { start: Date.now(), items: prev ? prev.items.map(it => ({ uid: uid(), key: it.key, he: it.he, en: it.en, cat: it.cat, tsec: it.tsec || 0, sets: it.sets.map(s => ({ w: fmtN(s.w), r: fmtN(s.r) })) })) : [] };
+  saveCurrent(true); go('log'); keepAwake();
 }
 function addExercise(ex) {
   const last = lastItem(ex.key), s0 = last && last.it.sets[0];
@@ -511,6 +544,8 @@ function finishWorkout() {
     return;
   }
   const w = { start: S.current.start, end: Date.now(), items };
+  const day = S.current.day;
+  if (day) { w.day = day.name; if (S.plan && S.plan.days.length) { S.plan.next = (day.idx + 1) % S.plan.days.length; savePlan(true); } }
   S.history = [w, ...S.history.filter(x => x.start !== w.start)].sort((a, b) => b.start - a.start);
   S.current = null; clearTimeout(curTimer);
   save('gym-w-' + w.start, w); save('gym-current', null);
@@ -590,7 +625,8 @@ function releaseWake() { try { if (wake) wake.release(); } catch (e) { /* ignore
 let toastT = null;
 function toast(msg, action) {
   const t = $('#toast'); clearTimeout(toastT);
-  t.replaceChildren(h('span', null, msg), action ? h('button', { type: 'button', onclick: () => { t.hidden = true; action.fn(); } }, action.label) : null);
+  t.replaceChildren(h('span', null, msg));
+  if (action) t.append(h('button', { type: 'button', onclick: () => { t.hidden = true; action.fn(); } }, action.label));
   t.hidden = false; toastT = setTimeout(() => { t.hidden = true; }, action ? 6000 : 2600);
 }
 function closeModal() { const m = $('#modal'); m.hidden = true; m.replaceChildren(); }
@@ -611,7 +647,7 @@ function render() {
   if (S.fatal) { app.replaceChildren(h('header', { class: 'hero' }, plates(), h('h1', null, 'יומן כושר')), h('p', { class: 'start-card', role: 'alert' }, S.fatal)); return; }
   if (!S.loaded) { app.replaceChildren(h('p', { class: 'muted' }, S.slow ? 'הטעינה לוקחת יותר זמן מהרגיל. היומן ייפתח כשהנתונים יגיעו.' : 'טוען את היומן…')); return; }
   if (S.needLogin) { app.replaceChildren(...renderLogin()); drawTimerBar(); return; }
-  const v =S.view === 'log' && S.current ? renderLog() : S.view === 'report' ? renderReport() : S.view === 'stats' ? renderStats() : renderHome();
+  const v =S.view === 'log' && S.current ? renderLog() : S.view === 'report' ? renderReport() : S.view === 'stats' ? renderStats() : S.view === 'plan' ? renderPlan() : renderHome();
   app.replaceChildren(...v);
   drawTimerBar();
   S.fresh = null;
@@ -636,6 +672,14 @@ function renderHome() {
         : 'האימון הראשון שלך. אחרי שתוסיף תרגילים, הם יופיעו אוטומטית בפעם הבאה.'));
   }
   out.push(card);
+  if (S.plan) {
+    const nx = S.plan.days[Math.min(S.plan.next || 0, S.plan.days.length - 1)];
+    out.push(h('button', { class: 'btn big stats-btn plan-btn', type: 'button', onclick: () => { S.planChoosing = false; go('plan'); } },
+      h('span', null, 'התוכנית שלי: ' + S.plan.name), h('span', { class: 'small muted' }, `${S.plan.days.length} ימים בסבב` + (nx ? ` · הבא בתור: ${nx.name}` : '') + ' · לעריכה')));
+  } else {
+    out.push(h('button', { class: 'btn big stats-btn plan-btn', type: 'button', onclick: () => { S.planChoosing = true; S.planTab = S.history.length >= 2 ? 'like' : 'pref'; go('plan'); } },
+      h('span', null, 'בנה תוכנית אימון'), h('span', { class: 'small muted' }, 'בחירה מתוכניות מוכנות: Full Body, PPL, Upper/Lower ועוד')));
+  }
   if (S.history.length) {
     const days = new Set(S.history.filter(w => w.start >= Date.now() - 28 * DAY).map(w => dkey(w.start))).size;
     out.push(h('button', { class: 'btn big stats-btn', type: 'button', onclick: () => go('stats') },
@@ -714,7 +758,7 @@ function renderLog() {
     h('button', { class: 'btn primary', type: 'button', onclick: confirmFinish }, 'סיום')));
   if (!cur.items.length) out.push(h('div', { class: 'empty' }, h('h3', null, 'היומן ריק'), h('p', null, 'הוסף את התרגיל הראשון באימון.')));
   cur.items.forEach((it, idx) => out.push(renderExercise(it, idx)));
-  out.push(h('button', { class: 'btn big add-ex', type: 'button', onclick: openPicker }, icon('plus'), 'הוסף תרגיל'));
+  out.push(h('button', { class: 'btn big add-ex', type: 'button', onclick: () => openPicker() }, icon('plus'), 'הוסף תרגיל'));
   out.push(h('button', { class: 'btn ghost', type: 'button', style: 'align-self:center', onclick: () => dialog('לבטל את האימון?', [h('p', { style: 'margin:0' }, 'מה שרשמת באימון הזה לא יישמר. אימונים קודמים לא ייפגעו.')],
     [{ label: 'בטל אימון', cls: 'danger', fn: cancelWorkout }, { label: 'חזרה ליומן', fn: closeModal }]) }, 'בטל אימון'));
   return out;
@@ -732,7 +776,8 @@ function renderExercise(it, idx) {
       h('button', { class: 'btn icon', type: 'button', 'aria-label': 'טיימר ל' + it.he, 'aria-expanded': String(S.timerOpen === it.uid), style: S.timerOpen === it.uid || (T && T.uid === it.uid) ? 'color:var(--accent)' : null,
         onclick: () => { S.timerOpen = S.timerOpen === it.uid ? null : it.uid; render(); } }, icon('timer')),
       h('button', { class: 'btn icon', type: 'button', 'aria-label': 'הסר את ' + it.he, onclick: removeEx }, icon('trash'))),
-    last ? h('div', { class: 'prev' }, 'פעם קודמת: ', last.it.sets.map((s, i) => [i ? ' · ' : '', h('span', null, s.w > 0 ? `${fmtN(s.w)}×${fmtN(s.r)}` : `${fmtN(s.r)} חז׳`)])) : h('div', { class: 'prev' }, 'תרגיל חדש ביומן'));
+    last ? h('div', { class: 'prev' }, 'פעם קודמת: ', last.it.sets.map((s, i) => [i ? ' · ' : '', h('span', null, s.w > 0 ? `${fmtN(s.w)}×${fmtN(s.r)}` : `${fmtN(s.r)} חז׳`)])) : h('div', { class: 'prev' }, 'תרגיל חדש ביומן'),
+    it.target ? h('div', { class: 'prev' }, 'יעד בתוכנית: ', h('span', null, it.target)) : null);
   if (S.timerOpen === it.uid) {
     const opts = [30, 60, 90, 120, 180, 0];
     card.append(h('div', { class: 'chips', role: 'group', 'aria-label': 'בחירת טיימר' },
@@ -759,14 +804,14 @@ function confirmFinish() {
 }
 
 /* ---------- exercise picker ---------- */
-function openPicker() {
-  const inLog = new Set(S.current.items.map(i => i.key));
+function openPicker(pick = addExercise, inKeys = S.current ? S.current.items.map(i => i.key) : [], tag = 'ביומן') {
+  const inLog = new Set(inKeys);
   const recent = []; const seen = new Set();
   for (const w of S.history) for (const it of w.items) if (!seen.has(it.key)) { seen.add(it.key); recent.push(EXBY[it.key] || { key: it.key, he: it.he, en: it.en, cat: it.cat || 'אחר' }); }
   const q = h('input', { type: 'search', id: 'pk-q', placeholder: 'חיפוש בעברית או באנגלית, למשל מתח', autocomplete: 'off', 'aria-label': 'חיפוש תרגיל' });
   const body = h('div', { class: 'sh-body' });
-  const item = ex => h('button', { type: 'button', class: 'pk-item' + (inLog.has(ex.key) ? ' in-log' : ''), onclick: () => addExercise(ex) },
-    h('span', { class: 'he' }, ex.he), ex.en ? h('span', { class: 'en' }, ex.en) : null);
+  const item = ex => h('button', { type: 'button', class: 'pk-item' + (inLog.has(ex.key) ? ' in-log' : ''), onclick: () => pick(ex) },
+    h('span', { class: 'he', 'data-tag': tag }, ex.he), ex.en ? h('span', { class: 'en' }, ex.en) : null);
   const draw = () => {
     const t = norm(q.value), kids = [];
     if (!t) {
@@ -781,7 +826,7 @@ function openPicker() {
       const hits = pool.filter(e => { const s = hay(e); return words.every(w => s.includes(w)); }).sort((a, b) => score(a) - score(b));
       hits.slice(0, 60).forEach(e => kids.push(item(e)));
       const name = q.value.trim();
-      if (!pool.some(e => norm(e.he) === t)) kids.push(h('button', { type: 'button', class: 'pk-item custom', onclick: () => addExercise({ key: 'custom:' + name, he: name, en: '', cat: 'אחר' }) }, `הוסף "${name}" כתרגיל חדש`));
+      if (!pool.some(e => norm(e.he) === t)) kids.push(h('button', { type: 'button', class: 'pk-item custom', onclick: () => pick({ key: 'custom:' + name, he: name, en: '', cat: 'אחר' }) }, `הוסף "${name}" כתרגיל חדש`));
       if (!hits.length) kids.unshift(h('p', { class: 'muted small', style: 'margin:8px 4px' }, 'לא נמצא תרגיל בשם הזה ברשימה.'));
     }
     body.replaceChildren(...kids); body.scrollTop = 0;
@@ -1010,6 +1055,241 @@ function renderStats() {
   }
   out.push(h('p', { class: 'muted small', style: 'margin:0' }, 'איך זה מחושב: כל סט נספר כסט מלא לשרירים העיקריים של התרגיל, וכחצי סט לשרירים המסייעים. הפס מראה סטים בשבוע; האזור המסומן הוא 10–20 סטים בשבוע לשריר, הטווח שמומלץ בדרך כלל לבניית שריר. ״פעמים בשבוע״ סופר ימים שבהם השריר עבד כשריר עיקרי. נפח = משקל × חזרות.'));
   return out;
+}
+
+/* ---------- training plans ---------- */
+// Each day: "Exercise key:sets:reps" separated by ";". Keys come from the catalogue above.
+const TEMPLATES = [
+  { id: 'fb3', name: 'Full Body למתחילים', days: [3], level: 'beginner', goals: ['muscle', 'general'], place: 'gym',
+    desc: 'כל הגוף בכל אימון, שני אימונים מתחלפים (A/B). מתאים למי שמתחיל או חוזר לחדר כושר.',
+    plan: [['אימון A', 'Back Squat:3:8–10;Bench Press:3:8–10;Barbell Row:3:8–10;Overhead Press:2:10–12;Plank:3:30–45 שנ׳'],
+      ['אימון B', 'Romanian Deadlift:3:8–10;Lat Pulldown:3:10–12;Incline Dumbbell Press:3:10–12;Leg Press:3:10–12;Hanging Knee Raise:3:10–15']] },
+  { id: 'fb2', name: 'Full Body פעמיים בשבוע', days: [2], level: 'beginner', goals: ['general', 'muscle'], place: 'gym',
+    desc: 'שני אימוני כל הגוף בשבוע. מינימום זמן, כל השרירים העיקריים.',
+    plan: [['אימון A', 'Back Squat:3:6–8;Bench Press:3:6–8;Seated Cable Row:3:8–12;Lateral Raise:2:12–15;Dumbbell Curl:2:10–12'],
+      ['אימון B', 'Deadlift:3:5;Overhead Press:3:6–8;Pull-Up:3:6–10;Bulgarian Split Squat:2:8–10;Triceps Pushdown:2:10–12']] },
+  { id: 'sl5', name: 'כוח 5×5', days: [3], level: 'beginner', goals: ['strength'], place: 'gym',
+    desc: 'שלושה תרגילי מוט בסיסיים בכל אימון, 5 סטים של 5. מעלים משקל קצת בכל אימון.',
+    plan: [['אימון A', 'Back Squat:5:5;Bench Press:5:5;Barbell Row:5:5'],
+      ['אימון B', 'Back Squat:5:5;Overhead Press:5:5;Deadlift:1:5']] },
+  { id: 'ul4', name: 'Upper / Lower', days: [4], level: 'intermediate', goals: ['muscle', 'strength'], place: 'gym',
+    desc: 'פלג גוף עליון ותחתון לסירוגין, ארבעה ימים. כל שריר פעמיים בשבוע.',
+    plan: [['עליון A', 'Bench Press:4:6–8;Barbell Row:4:6–8;Overhead Press:3:8–10;Lat Pulldown:3:10–12;Dumbbell Curl:2:10–12;Triceps Pushdown:2:10–12'],
+      ['תחתון A', 'Back Squat:4:6–8;Romanian Deadlift:3:8–10;Leg Press:3:10–12;Lying Leg Curl:3:10–12;Standing Calf Raise:3:12–15'],
+      ['עליון B', 'Incline Dumbbell Press:3:8–10;Pull-Up:3:6–10;Seated Dumbbell Shoulder Press:3:10–12;Seated Cable Row:3:10–12;Lateral Raise:3:12–15;Hammer Curl:2:10–12;Overhead Triceps Extension:2:10–12'],
+      ['תחתון B', 'Deadlift:3:5;Bulgarian Split Squat:3:8–10;Hip Thrust:3:8–12;Leg Extension:3:12–15;Seated Calf Raise:3:12–15;Hanging Leg Raise:3:10–15']] },
+  { id: 'ppl', name: 'Push / Pull / Legs', days: [3, 6], level: 'intermediate', goals: ['muscle'], place: 'gym',
+    desc: 'דחיפה, משיכה ורגליים. 3 ימים בשבוע, או 6 ימים (כל יום פעמיים) למתקדמים.',
+    plan: [['דחיפה (Push)', 'Bench Press:4:6–8;Incline Dumbbell Press:3:8–10;Overhead Press:3:8–10;Lateral Raise:3:12–15;Triceps Pushdown:3:10–12;Overhead Triceps Extension:2:10–12'],
+      ['משיכה (Pull)', 'Deadlift:3:5;Pull-Up:3:6–10;Seated Cable Row:3:8–12;Face Pull:3:12–15;Barbell Curl:3:8–12;Hammer Curl:2:10–12'],
+      ['רגליים (Legs)', 'Back Squat:4:6–8;Romanian Deadlift:3:8–10;Leg Press:3:10–12;Lying Leg Curl:3:10–12;Standing Calf Raise:4:10–15;Hanging Leg Raise:3:10–15']] },
+  { id: 'bro', name: 'ספליט 5 ימים', days: [5], level: 'intermediate', goals: ['muscle'], place: 'gym',
+    desc: 'קבוצת שרירים אחת בכל יום: חזה, גב, כתפיים, רגליים, ידיים. הרבה נפח לכל שריר.',
+    plan: [['חזה', 'Bench Press:4:6–10;Incline Dumbbell Press:3:8–12;Cable Crossover:3:12–15;Chest Dips:3:8–12'],
+      ['גב', 'Deadlift:3:5;Pull-Up:4:6–10;Barbell Row:3:8–10;Lat Pulldown:3:10–12;Shrugs:3:10–12'],
+      ['כתפיים', 'Overhead Press:4:6–10;Lateral Raise:4:12–15;Rear Delt Fly:3:12–15;Front Raise:2:12–15'],
+      ['רגליים', 'Back Squat:4:6–10;Leg Press:3:10–12;Romanian Deadlift:3:8–10;Leg Extension:3:12–15;Lying Leg Curl:3:10–12;Standing Calf Raise:4:12–15'],
+      ['ידיים', 'Barbell Curl:3:8–12;Skull Crusher:3:8–12;Hammer Curl:3:10–12;Rope Pushdown:3:10–12;Incline Dumbbell Curl:2:10–12;Overhead Triceps Extension:2:10–12']] },
+  { id: 'arnold', name: 'ספליט ארנולד', days: [6], level: 'advanced', goals: ['muscle'], place: 'gym',
+    desc: 'חזה+גב, כתפיים+ידיים, רגליים. כל יום פעמיים בשבוע, שישה אימונים. למתקדמים.',
+    plan: [['חזה וגב', 'Bench Press:4:8–10;Pull-Up:4:6–10;Incline Dumbbell Press:3:8–12;Barbell Row:3:8–10;Dumbbell Pullover:3:10–12'],
+      ['כתפיים וידיים', 'Overhead Press:4:8–10;Lateral Raise:4:12–15;Barbell Curl:3:8–12;Skull Crusher:3:8–12;Hammer Curl:2:10–12;Triceps Pushdown:2:10–12'],
+      ['רגליים', 'Back Squat:4:8–10;Romanian Deadlift:3:8–10;Walking Lunge:3:10–12;Leg Extension:3:12–15;Lying Leg Curl:3:10–12;Standing Calf Raise:4:12–15']] },
+  { id: 'home', name: 'אימון בבית במשקל גוף', days: [2, 3, 4], level: 'beginner', goals: ['general'], place: 'home',
+    desc: 'בלי ציוד, רק ספסל או כיסא יציב ושולחן. שני אימונים מתחלפים לכל הגוף.',
+    plan: [['אימון A', 'Push-Up:3:8–15;Bodyweight Squat:3:15–20;Inverted Row:3:8–12;Reverse Lunge:3:10–12;Glute Bridge:3:15;Plank:3:30–60 שנ׳'],
+      ['אימון B', 'Pike Push-Up:3:6–10;Bulgarian Split Squat:3:8–12;Superman:3:12–15;Bench Dips:3:10–15;Mountain Climber:3:30 שנ׳;Side Plank:2:30 שנ׳']] }
+];
+const LEVELS = { beginner: 'מתחילים', intermediate: 'בינוני', advanced: 'מתקדמים' };
+const GOALS = { strength: 'כוח', muscle: 'מסת שריר', general: 'כושר כללי' };
+function planFromTemplate(t) {
+  return { name: t.name, from: t.id, next: 0, days: t.plan.map(([name, list]) => ({ name, items: list.split(';').map(s => {
+    const [key, sets, reps] = s.split(':'), e = EXBY[key] || { key, he: key, en: key, cat: 'אחר' };
+    return { key, he: e.he, en: e.en, cat: e.cat, sets: +sets, reps };
+  }) })) };
+}
+let planT = null;
+function savePlan(now) { clearTimeout(planT); const go = () => save('gym-plan', S.plan); if (now) go(); else planT = setTimeout(go, 600); }
+
+/* muscle vectors: compare workouts and plan days by which muscles they train */
+function mvec(items) {
+  const v = {};
+  for (const it of items) { const m = musclesFor(it), n = Array.isArray(it.sets) ? it.sets.length : (+it.sets || 0);
+    for (const id of m.p) v[id] = (v[id] || 0) + n; for (const id of m.s) v[id] = (v[id] || 0) + n / 2; }
+  return v;
+}
+function cosine(a, b) { let d = 0, na = 0, nb = 0; for (const [id] of MUSCLES) { const x = a[id] || 0, y = b[id] || 0; d += x * y; na += x * x; nb += y * y; } return na && nb ? d / Math.sqrt(na * nb) : 0; }
+function dayLabel(v) {
+  const s = ids => ids.reduce((a, id) => a + (v[id] || 0), 0);
+  const push = s(['ch', 'fd', 'sd', 'tri']), pull = s(['lat', 'ub', 'rd', 'bi']), legs = s(['q', 'h', 'g', 'cv', 'add']), all = push + pull + legs + s(['abs', 'obl', 'lb', 'fa']) || 1;
+  if (legs / all > .6) return 'רגליים';
+  if (legs / all < .15) { const up = push + pull || 1; return push / up > .7 ? 'דחיפה' : pull / up > .7 ? 'משיכה' : 'פלג גוף עליון'; }
+  return 'כל הגוף';
+}
+function recentWorkouts() { const from = Date.now() - 42 * DAY; const r = S.history.filter(w => w.start >= from); return r.length >= 2 ? r : S.history.slice(0, 8); }
+function similarity(t) {
+  const ws = recentWorkouts(); if (ws.length < 2) return null;
+  const weeks = Math.max(1, (Date.now() - ws[ws.length - 1].start) / (7 * DAY));
+  const perWeek = ws.length / weeks;
+  const tDays = planFromTemplate(t).days, tv = tDays.map(d => mvec(d.items));
+  const structure = ws.reduce((a, w) => a + Math.max(...tv.map(v => cosine(mvec(w.items), v))), 0) / ws.length;
+  const userKeys = new Set(ws.flatMap(w => w.items.map(i => i.key))), tKeys = new Set(tDays.flatMap(d => d.items.map(i => i.key)));
+  const shared = [...userKeys].filter(k => tKeys.has(k)).length;
+  const overlap = shared / Math.max(1, Math.min(userKeys.size, tKeys.size));
+  const freq = Math.max(0, 1 - Math.min(...t.days.map(d => Math.abs(d - perWeek))) / 3);
+  return { score: Math.round(100 * (.5 * structure + .3 * overlap + .2 * freq)), perWeek, shared, total: userKeys.size };
+}
+function planFromHistory() {
+  const ws = recentWorkouts().slice(0, 12).reverse(); if (ws.length < 2) return null;
+  const clusters = [];
+  for (const w of ws) {
+    const v = mvec(w.items), keys = new Set(w.items.map(i => i.key));
+    let best = null, bs = 0;
+    for (const c of clusters) { const inter = [...keys].filter(k => c.keys.has(k)).length, jac = inter / (new Set([...keys, ...c.keys]).size || 1), cs = cosine(v, c.v);
+      if (cs > .8 && jac >= .35 && cs + jac > bs) { best = c; bs = cs + jac; } }
+    if (best) { best.ws.push(w); for (const k of keys) best.keys.add(k); for (const [id, x] of Object.entries(v)) best.v[id] = (best.v[id] || 0) + x; }
+    else clusters.push({ ws: [w], keys, v: { ...v } });
+  }
+  const days = clusters.slice(0, 6).map(c => {
+    const count = {}, order = [], seen = {};
+    for (const w of c.ws) w.items.forEach((it, i) => { count[it.key] = (count[it.key] || 0) + 1; if (!seen[it.key]) { seen[it.key] = it; order.push([it.key, i]); } });
+    const items = order.filter(([k]) => count[k] / c.ws.length >= .5).sort((a, b) => a[1] - b[1]).map(([k]) => {
+      const last = c.ws.slice().reverse().find(w => w.items.some(i => i.key === k)).items.find(i => i.key === k);
+      const rs = last.sets.map(s => s.r).filter(r => r > 0), lo = Math.min(...rs), hi = Math.max(...rs);
+      return { key: k, he: last.he, en: last.en, cat: last.cat, sets: last.sets.length, reps: rs.length ? (lo === hi ? String(lo) : lo + '–' + hi) : '8–12' };
+    });
+    return { name: dayLabel(c.v), items };
+  }).filter(d => d.items.length);
+  const names = {}; days.forEach(d => { names[d.name] = (names[d.name] || 0) + 1; });
+  const idx = {}; days.forEach(d => { if (names[d.name] > 1) { idx[d.name] = (idx[d.name] || 0) + 1; d.name += ' ' + 'ABCDEF'[idx[d.name] - 1]; } });
+  return days.length ? { name: 'התוכנית שלי', from: 'history', next: 0, days } : null;
+}
+function prefScore(t, f) {
+  let s = 0, why = [];
+  if (f.days) { if (t.days.includes(f.days)) { s += 4; why.push(f.days + ' ימים בשבוע'); } else s -= Math.min(...t.days.map(d => Math.abs(d - f.days))) * 1.5; }
+  if (f.goal) { if (t.goals.includes(f.goal)) { s += 3; why.push(GOALS[f.goal]); } else s -= 1; }
+  if (f.level) { const L = ['beginner', 'intermediate', 'advanced'], d = Math.abs(L.indexOf(t.level) - L.indexOf(f.level)); s += d === 0 ? 2 : d === 1 ? 0 : -2; if (!d) why.push(LEVELS[f.level]); }
+  if (f.place) { if (t.place === f.place) { s += 3; why.push(f.place === 'home' ? 'בבית' : 'חדר כושר'); } else s -= 6; }
+  return { s, why };
+}
+
+/* plan screen: choose (by preference / like my workouts) or edit */
+function renderPlan() {
+  const out = [];
+  out.push(h('div', { class: 'topbar' }, h('button', { class: 'btn ghost', type: 'button', onclick: () => { S.planChoosing = false; go('home'); } }, 'ראשי'),
+    h('div', { class: 'grow' }, h('div', { class: 'label' }, 'תוכנית אימון'), h('div', { style: 'font-weight:700' }, S.plan && !S.planChoosing ? S.plan.name : 'בחירת תוכנית'))));
+  if (S.plan && !S.planChoosing) return out.concat(renderPlanEditor());
+  if (S.plan) out.push(h('button', { class: 'btn ghost', type: 'button', style: 'align-self:flex-start', onclick: () => { S.planChoosing = false; render(); } }, 'חזרה לתוכנית הנוכחית'));
+  const tab = S.planTab || 'pref', hasHist = S.history.length >= 2;
+  out.push(h('div', { class: 'seg', role: 'group', 'aria-label': 'איך לבחור' },
+    h('button', { type: 'button', 'aria-pressed': String(tab === 'pref'), onclick: () => { S.planTab = 'pref'; render(); } }, 'לפי מה שאני רוצה'),
+    h('button', { type: 'button', 'aria-pressed': String(tab === 'like'), onclick: () => { S.planTab = 'like'; render(); } }, 'דומה למה שאני עושה')));
+  let list;
+  if (tab === 'pref') {
+    const f = S.pf || (S.pf = { days: 3, goal: 'muscle', level: 'beginner', place: 'gym' });
+    const chips = (label, key, opts) => h('div', { class: 'pf' }, h('div', { class: 'label' }, label), h('div', { class: 'chips flat', role: 'group', 'aria-label': label },
+      opts.map(([v, t]) => h('button', { type: 'button', class: 'chip', 'aria-pressed': String(f[key] === v), onclick: () => { f[key] = f[key] === v ? null : v; render(); } }, t))));
+    out.push(h('section', { class: 'card' },
+      chips('כמה ימים בשבוע?', 'days', [[2, '2'], [3, '3'], [4, '4'], [5, '5'], [6, '6']]),
+      chips('מה המטרה?', 'goal', Object.entries(GOALS)),
+      chips('ניסיון', 'level', Object.entries(LEVELS)),
+      chips('איפה?', 'place', [['gym', 'חדר כושר'], ['home', 'בבית']])));
+    list = TEMPLATES.map(t => ({ t, ...prefScore(t, f) })).sort((a, b) => b.s - a.s);
+    out.push(h('h2', null, 'התוכניות המתאימות לך'));
+    list.forEach((x, i) => out.push(templateCard(x.t, i === 0 ? 'הכי מתאימה' : null, x.why.length ? 'מתאים: ' + x.why.join(' · ') : null)));
+  } else if (!hasHist) {
+    out.push(h('div', { class: 'card empty' }, h('h3', null, 'עוד אין מספיק אימונים'), h('p', { style: 'margin:0' }, 'אחרי שני אימונים לפחות, נוכל להשוות אותם לתוכניות ולבנות תוכנית מהאימונים שלך. בינתיים אפשר לבחור לפי מה שאתה רוצה.')));
+  } else {
+    const mine = planFromHistory();
+    if (mine) {
+      out.push(h('h2', null, 'תוכנית מהאימונים שלך'));
+      out.push(planCard(mine, 'האימונים האחרונים שלך חולקו לפי סוג, עם התרגילים שחוזרים בהם. אפשר לערוך אחרי הבחירה.', 'כמו שאתה מתאמן', null));
+    }
+    const sims = TEMPLATES.map(t => ({ t, sim: similarity(t) })).sort((a, b) => b.sim.score - a.sim.score);
+    out.push(h('h2', null, 'תוכניות דומות'));
+    out.push(h('p', { class: 'muted small', style: 'margin:0' }, `לפי ${recentWorkouts().length} האימונים האחרונים: כ-${fmtN(Math.round(sims[0].sim.perWeek * 10) / 10)} אימונים בשבוע, ${sims[0].sim.total} תרגילים שונים.`));
+    sims.forEach(({ t, sim }, i) => out.push(templateCard(t, (i === 0 ? 'הכי דומה · ' : '') + sim.score + '% דמיון', `${sim.shared} מהתרגילים שלך נמצאים בתוכנית`)));
+  }
+  return out;
+}
+function templateCard(t, badge, why) {
+  return planCard(planFromTemplate(t), t.desc, badge, `${t.days.join(' או ')} ימים בשבוע · ${LEVELS[t.level]} · ${t.goals.map(g => GOALS[g]).join(', ')}` + (why ? ' · ' + why : ''), t.id);
+}
+function planCard(plan, desc, badge, meta, id) {
+  const key = id || 'mine', open = S.planOpen === key;
+  return h('section', { class: 'card tpl' },
+    h('div', { class: 'line' }, h('h3', null, plan.name), badge ? h('span', { class: 'pill good' }, badge) : null),
+    meta ? h('div', { class: 'small muted' }, meta) : null,
+    h('p', { style: 'margin:0' }, desc),
+    open ? h('div', { class: 'tpl-days' }, plan.days.map(d => h('div', null, h('b', null, d.name), h('ul', null, d.items.map(i => h('li', null, i.he, h('span', { class: 'muted small num', dir: 'ltr' }, ` ${i.sets}×${i.reps}`))))))) : null,
+    h('div', { class: 'row-actions' },
+      h('button', { class: 'btn', type: 'button', 'aria-expanded': String(open), onclick: () => { S.planOpen = open ? null : key; render(); } }, open ? 'הסתר ימים' : `הצג ${plan.days.length} ימים`),
+      h('button', { class: 'btn primary', type: 'button', onclick: () => choosePlan(plan) }, 'בחר את התוכנית')));
+}
+function choosePlan(plan) {
+  const apply = () => { S.plan = clone(plan); S.planChoosing = false; S.planOpen = null; savePlan(true); closeModal(); render(); window.scrollTo(0, 0); toast('התוכנית נשמרה. אפשר לערוך אותה כאן.'); };
+  if (S.plan) dialog('להחליף את התוכנית?', [h('p', { style: 'margin:0' }, `התוכנית "${S.plan.name}" תוחלף ב"${plan.name}". האימונים שכבר רשמת לא ייפגעו.`)],
+    [{ label: 'החלף', cls: 'primary', fn: apply }, { label: 'ביטול', fn: closeModal }]);
+  else apply();
+}
+function renderPlanEditor() {
+  const p = S.plan, out = [];
+  const nm = h('input', { id: 'plan-name', type: 'text', value: p.name, 'aria-label': 'שם התוכנית', class: 'pl-name', oninput: e => { p.name = e.target.value; savePlan(); } });
+  out.push(h('section', { class: 'card' }, h('label', { for: 'plan-name', class: 'label' }, 'שם התוכנית'), nm,
+    h('p', { class: 'muted small', style: 'margin:0' }, `${p.days.length} ימים בסבב. כשתלחץ "פתח יומן" תוכל לבחור יום, והיומן יציע את הבא בתור: ${p.days[p.next || 0] ? p.days[p.next || 0].name : '—'}.`)));
+  p.days.forEach((d, di) => {
+    const card = h('section', { class: 'card pl-day' });
+    card.append(h('div', { class: 'pl-dhead' },
+      h('span', { class: 'pl-badge num' + ((p.next || 0) === di ? ' next' : ''), title: (p.next || 0) === di ? 'הבא בתור' : '' }, di + 1),
+      h('input', { id: `day-${di}`, type: 'text', value: d.name, 'aria-label': `שם יום ${di + 1}`, oninput: e => { d.name = e.target.value; savePlan(); } }),
+      h('button', { class: 'btn icon', type: 'button', 'aria-label': `מחק את ${d.name}`, onclick: () => {
+        p.days.splice(di, 1); if ((p.next || 0) >= p.days.length) p.next = 0; savePlan(); render();
+        toast(`${d.name} נמחק`, { label: 'בטל', fn: () => { p.days.splice(di, 0, d); savePlan(); render(); } }); } }, icon('trash'))));
+    d.items.forEach((it, ii) => {
+      const move = dir => () => { const j = ii + dir; if (j < 0 || j >= d.items.length) return; [d.items[ii], d.items[j]] = [d.items[j], d.items[ii]]; savePlan(); render(); };
+      card.append(h('div', { class: 'pl-ex' },
+        h('div', { class: 'pl-exname' }, h('div', { class: 'grow' }, h('b', null, it.he), it.en ? h('span', { class: 'muted small', dir: 'ltr' }, ' ' + it.en) : null),
+          h('button', { class: 'btn icon', type: 'button', 'aria-label': 'הזז למעלה', disabled: ii === 0 || null, onclick: move(-1) }, '↑'),
+          h('button', { class: 'btn icon', type: 'button', 'aria-label': 'הזז למטה', disabled: ii === d.items.length - 1 || null, onclick: move(1) }, '↓'),
+          h('button', { class: 'btn icon', type: 'button', 'aria-label': `הסר את ${it.he}`, onclick: () => { d.items.splice(ii, 1); savePlan(); render(); } }, icon('x'))),
+        h('div', { class: 'pl-ctl' },
+          h('div', { class: 'stepper', role: 'group', 'aria-label': 'סטים' },
+            h('button', { type: 'button', 'aria-label': 'פחות סטים', onclick: () => { it.sets = Math.max(1, it.sets - 1); savePlan(); render(); } }, '−'),
+            h('span', { class: 'num' }, it.sets + ' סטים'),
+            h('button', { type: 'button', 'aria-label': 'עוד סט', onclick: () => { it.sets = Math.min(10, it.sets + 1); savePlan(); render(); } }, '+')),
+          h('label', { class: 'pl-reps' }, h('span', { class: 'small muted' }, 'חזרות'),
+            h('input', { id: `reps-${di}-${ii}`, type: 'text', value: it.reps, dir: 'ltr', 'aria-label': `חזרות ל${it.he}`, oninput: e => { it.reps = e.target.value; savePlan(); } })))));
+    });
+    card.append(h('button', { class: 'btn add-ex', type: 'button', onclick: () => openPicker(ex => {
+      d.items.push({ key: ex.key, he: ex.he, en: ex.en || '', cat: ex.cat, sets: 3, reps: '8–12' }); savePlan(); closeModal(); render();
+    }, d.items.map(i => i.key), 'ביום הזה') }, icon('plus'), 'הוסף תרגיל ליום'));
+    out.push(card);
+  });
+  out.push(h('button', { class: 'btn big add-ex', type: 'button', onclick: () => { p.days.push({ name: 'יום ' + (p.days.length + 1), items: [] }); savePlan(); render(); } }, icon('plus'), 'הוסף יום'));
+  out.push(h('div', { class: 'row-actions' },
+    h('button', { class: 'btn primary', type: 'button', onclick: () => { saveCurrent(true); savePlan(true); go('home'); openLog(); } }, 'התחל אימון מהתוכנית'),
+    h('button', { class: 'btn', type: 'button', onclick: () => { S.planChoosing = true; S.planTab = S.history.length >= 2 ? 'like' : 'pref'; render(); window.scrollTo(0, 0); } }, 'החלף תוכנית'),
+    h('button', { class: 'btn danger', type: 'button', onclick: () => dialog('למחוק את התוכנית?', [h('p', { style: 'margin:0' }, 'התוכנית תימחק. האימונים שרשמת יישארו.')],
+      [{ label: 'מחק', cls: 'danger', fn: () => { S.plan = null; savePlan(true); closeModal(); go('home'); toast('התוכנית נמחקה'); } }, { label: 'ביטול', fn: closeModal }]) }, 'מחק תוכנית')));
+  return out;
+}
+function chooseStart() {
+  const p = S.plan, next = Math.min(p.next || 0, p.days.length - 1);
+  const opt = (title, sub, fn, primary) => h('button', { type: 'button', class: 'start-opt' + (primary ? ' primary' : ''), onclick: fn }, h('b', null, title), sub ? h('span', { class: 'small' }, sub) : null);
+  openSheet(h('div', { class: 'sheet dialog', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'איזה אימון היום?' },
+    h('div', { class: 'sh-body' }, h('h2', null, 'איזה אימון היום?'), h('p', { class: 'muted small', style: 'margin:0' }, p.name),
+      p.days.map((d, i) => opt(d.name + (i === next ? ' · הבא בתור' : ''), d.items.map(x => x.he).join(' · ') || 'אין תרגילים עדיין', () => { closeModal(); startFromPlan(i); }, i === next)),
+      opt('כמו באימון הקודם', S.history[0] ? 'התרגילים מהאימון של ' + dayFmt.format(S.history[0].start) : 'יומן ריק', () => { closeModal(); startFromLast(); }),
+      h('button', { class: 'btn ghost', type: 'button', onclick: closeModal }, 'ביטול'))), '.start-opt');
+}
+function startFromPlan(i) {
+  const d = S.plan.days[i];
+  S.current = { start: Date.now(), day: { idx: i, name: d.name }, items: d.items.map(pi => {
+    const last = lastItem(pi.key), firstReps = (String(pi.reps).match(/\d+/) || [''])[0];
+    const sets = Array.from({ length: pi.sets }, (_, j) => { const s = last && (last.it.sets[j] || last.it.sets[last.it.sets.length - 1]); return s ? { w: fmtN(s.w), r: fmtN(s.r) } : { w: '', r: firstReps }; });
+    return { uid: uid(), key: pi.key, he: pi.he, en: pi.en, cat: pi.cat, tsec: last ? (last.it.tsec || 0) : 0, target: `${pi.sets} × ${pi.reps}`, sets };
+  }) };
+  saveCurrent(true); go('log'); keepAwake();
 }
 
 /* ---------- report ---------- */
