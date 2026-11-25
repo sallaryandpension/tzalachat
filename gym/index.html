@@ -136,6 +136,10 @@ body.nav-on .topbar > .btn.ghost:first-child { display: none; }
 .srow.prog input { font-size: 1.1rem; }
 .pv { min-height: 50px; display: flex; align-items: center; justify-content: center; border-radius: 12px; background: var(--chip); color: var(--muted); font-size: .85rem; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; padding: 0 2px; cursor: default; user-select: none; }
 .pv.empty-pv { background: transparent; }
+.comp { display: flex; align-items: center; gap: 6px; margin-inline-start: 1.3rem; padding: 2px 8px; white-space: nowrap; border-inline-start: 3px solid var(--line-strong); font-size: .9rem; }
+.comp input { width: 56px; min-height: 40px; text-align: center; font: 600 1rem var(--f-display); border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface-2); color: var(--ink); }
+.comp .btn.icon { width: 40px; min-height: 40px; }
+.comp.offer .btn { min-height: 40px; padding: 6px 10px; color: var(--accent); font-weight: 600; }
 .srow.head { font-size: .78rem; color: var(--muted); font-weight: 600; }
 .srow .n { font-family: var(--f-display); font-weight: 700; color: var(--muted); text-align: center; }
 .srow input { width: 100%; box-sizing: border-box; min-height: 50px; font: 600 1.25rem var(--f-display); text-align: center; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface-2); color: var(--ink); font-variant-numeric: tabular-nums; }
@@ -636,7 +640,7 @@ function addSet(item) {
 function finishWorkout() {
   const prog = !!S.current.prog;
   const items = S.current.items.map(it => ({ key: it.key, he: it.he, en: it.en, cat: it.cat, tsec: it.tsec || 0,
-    sets: it.sets.filter(s => !prog || s.done || s.e).map(s => { const o = { w: num(s.w), r: num(s.r) }; if (prog && s.ot) { o.ot = s.ot; o.ow = s.ow || 0; } return o; })
+    sets: it.sets.filter(s => !prog || s.done || s.e).map(s => { const o = { w: num(s.w), r: num(s.r) }; if (prog && s.ot) { o.ot = s.ot; o.ow = s.ow || 0; } if (s.c > 0) o.c = s.c; return o; })
       .filter(s => (s.r > 0) || (s.w > 0)).map(s => ({ ...s, w: s.w > 0 ? s.w : 0, r: s.r > 0 ? s.r : 0 })) }))
     .filter(it => it.sets.length);
   if (!items.length) {
@@ -669,7 +673,7 @@ function compare(it, w) {
   if (b.r < pb.r) return { kind: 'down', text: `−${pb.r - b.r} חזרות` };
   return { kind: 'same', text: 'כמו בפעם הקודמת' };
 }
-const setText = s => s.w > 0 ? `${fmtN(s.w)} ק״ג × ${fmtN(s.r)}` : `${fmtN(s.r)} חזרות`;
+const setText = s => (s.w > 0 ? `${fmtN(s.w)} ק״ג × ${fmtN(s.r)}` : `${fmtN(s.r)} חזרות`) + (s.c > 0 ? ` (+${s.c} השלמה)` : '');
 function reportText(w) {
   const st = stats(w), lines = [`אימון – ${dayFmt.format(w.start)}`, `${timeFmt.format(w.start)}–${timeFmt.format(w.end)} (${minutes(w.end - w.start)})`,
     `${st.ex} תרגילים · ${st.sets} סטים · ${st.reps} חזרות · נפח ${st.vol.toLocaleString('he-IL')} ק״ג`, ''];
@@ -927,7 +931,7 @@ function renderExercise(it, idx) {
       oninput: e => { s[field] = e.target.value.replace(/[^\d.,]/g, ''); s.e = true; if (e.target.value !== s[field]) e.target.value = s[field]; saveCurrent(); },
       onfocus: e => e.target.select() });
     const done = prog ? h('button', { class: 'btn icon check' + (s.done ? ' on' : ''), type: 'button', 'aria-pressed': String(!!s.done), 'aria-label': `סט ${j + 1} בוצע`,
-      onclick: () => { if (s.done) { s.done = false; it.msg = null; } else { if (!num(s.r)) { toast('כתוב כמה חזרות עשית, ואז סמן בוצע.'); return; } onSetDone(it, j); }
+      onclick: () => { if (s.done) { s.done = false; s.c = 0; it.msg = null; } else { if (!num(s.r)) { toast('כתוב כמה חזרות עשית, ואז סמן בוצע.'); return; } onSetDone(it, j); }
         saveCurrent(); render(); } }, icon('check')) : null;
     // Last time's same set: read-only, so it stays visible while the inputs change.
     const ps = last && last.it.sets[j];
@@ -936,6 +940,20 @@ function renderExercise(it, idx) {
       : h('span', { class: 'pv empty-pv', 'aria-label': 'אין נתון מהפעם הקודמת' }, '—');
     sets.append(h('div', { class: 'srow' + pc + (s.done ? ' done' : '') }, h('span', { class: 'n num' }, j + 1), pv, inp('w', 'משקל'), inp('r', 'חזרות'), done,
       it.sets.length > 1 ? h('button', { class: 'btn icon', type: 'button', 'aria-label': `מחק סט ${j + 1}`, onclick: () => { it.sets.splice(j, 1); saveCurrent(); render(); } }, icon('x')) : h('span')));
+    // Short of the target: offer to finish the missing reps. They are logged but never counted in analysis or learning.
+    const short = prog && s.done && s.tr ? s.tr - (num(s.r) || 0) : 0;
+    if (s.c > 0) {
+      sets.append(h('div', { class: 'comp' },
+        h('span', null, 'השלמה:'),
+        h('input', { id: `c-${it.uid}-${j}`, type: 'text', inputmode: 'numeric', dir: 'ltr', value: String(s.c), 'aria-label': `חזרות השלמה בסט ${j + 1}`,
+          oninput: e => { const v = parseInt(e.target.value.replace(/\D/g, ''), 10); s.c = v > 0 ? v : 0; saveCurrent(); }, onfocus: e => e.target.select() }),
+        h('span', { class: 'muted small' }, isTimed(it) ? 'שנ׳ · לא נספר בניתוח' : 'חז׳ · לא נספר בניתוח'),
+        h('button', { class: 'btn icon', type: 'button', 'aria-label': `בטל השלמה בסט ${j + 1}`, onclick: () => { s.c = 0; saveCurrent(); render(); } }, icon('x'))));
+    } else if (short > 0) {
+      sets.append(h('div', { class: 'comp offer' },
+        h('button', { class: 'btn ghost small', type: 'button', onclick: () => { s.c = short; saveCurrent(); render(); } }, icon('plus'), `השלמה של ${short} ${isTimed(it) ? 'שניות' : 'חזרות'}`),
+        h('span', { class: 'muted small' }, 'נרשם, אבל הניתוח סופר רק את ' + fmtN(num(s.r)))));
+    }
   });
   if (prog && it.note) card.append(h('div', { class: 'sugg' }, h('b', null, 'הצעה: '), it.note));
   if (prog && it.msg) card.append(h('div', { class: 'adapt ' + (it.msg.ok ? 'ok' : 'hard'), role: 'status' }, it.msg.text));
