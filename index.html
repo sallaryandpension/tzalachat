@@ -12,7 +12,7 @@
   --accent: #6b2e5f; --accent-hover: #57234d; --accent-soft: #f4e9f1; --on-accent: #ffffff;
   --protein: #2a78d6; --carb: #eb6834; --fat: #1baf7a;
   --good: #0ca30c; --good-ink: #006300; --warn: #fab219; --warn-ink: #855400; --bad: #d03b3b; --bad-ink: #b42323;
-  --scrim: rgba(12, 20, 17, 0.45); --on-series: #ffffff;
+  --scrim: rgba(12, 20, 17, 0.45); --on-series: #ffffff; --steps: #6250d6;
   --shadow: 0 1px 2px rgba(19, 32, 27, 0.06), 0 6px 20px rgba(19, 32, 27, 0.06);
   --f-display: "Secular One", "IBM Plex Sans Hebrew", system-ui, sans-serif;
   --f-body: "IBM Plex Sans Hebrew", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
@@ -23,7 +23,7 @@
     --bg: #0f1513; --surface: #161e1b; --surface-2: #1e2824; --ink: #eef2f0; --ink-2: #b9c5c0; --muted: #8c9994;
     --line: #2a352f; --grid: #232d29; --axis: #3a4641;
     --accent: #d89bc8; --accent-hover: #e6b6d9; --accent-soft: #2d2029; --on-accent: #1d1019;
-    --protein: #3987e5; --carb: #d95926; --fat: #199e70;
+    --protein: #3987e5; --carb: #d95926; --fat: #199e70; --steps: #9085e9;
     --good: #0ca30c; --good-ink: #46c246; --warn: #fab219; --warn-ink: #f5c04d; --bad: #e66767; --bad-ink: #f29191;
     --scrim: rgba(0, 0, 0, 0.6); --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
     color-scheme: dark;
@@ -33,7 +33,7 @@
   --bg: #0f1513; --surface: #161e1b; --surface-2: #1e2824; --ink: #eef2f0; --ink-2: #b9c5c0; --muted: #8c9994;
   --line: #2a352f; --grid: #232d29; --axis: #3a4641;
   --accent: #d89bc8; --accent-hover: #e6b6d9; --accent-soft: #2d2029; --on-accent: #1d1019;
-  --protein: #3987e5; --carb: #d95926; --fat: #199e70;
+  --protein: #3987e5; --carb: #d95926; --fat: #199e70; --steps: #9085e9;
   --good: #0ca30c; --good-ink: #46c246; --warn: #fab219; --warn-ink: #f5c04d; --bad: #e66767; --bad-ink: #f29191;
   --scrim: rgba(0, 0, 0, 0.6); --shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
   color-scheme: dark;
@@ -165,6 +165,7 @@ main.wrap { padding-block: 18px 48px; display: grid; gap: 16px; }
 .chart .hit { fill: transparent; }
 .chart .bar-k { fill: var(--accent); }
 .chart .bar-p { fill: var(--protein); }
+.chart .bar-s { fill: var(--steps); }
 .chart .dim { opacity: 0.35; }
 .chart .missing { fill: var(--axis); }
 .tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--bg); font-size: 12px; padding: 6px 8px; border-radius: 8px; white-space: nowrap; transform: translate(-50%, -100%); z-index: 2; }
@@ -777,7 +778,7 @@ function bodyFor(docId) {
   if (info.kind === 'custom') return { foods: b.custom.map(({ id, name, v, serv }) => ({ id, name, v, serv: serv || null })) };
   if (info.kind === 'weights') return { list: b.weights || [] };
   const day = b.days[info.date];
-  return day && day.entries.length ? day : null;
+  return day && (day.entries.length || day.steps) ? day : null;
 }
 async function flush(docId) {
   const w = writes[docId]; w.busy = true;
@@ -873,8 +874,19 @@ function findFoodFor(entry) {
 /* ---------- day data ---------- */
 function getDay(date) { return state.days[date] || { date, entries: [] }; }
 function setDay(date, entries) {
-  if (entries.length) state.days[date] = { date, entries }; else delete state.days[date];
+  const steps = state.days[date] && state.days[date].steps;
+  if (entries.length || steps) state.days[date] = steps ? { date, entries, steps } : { date, entries }; else delete state.days[date];
   persist(did('day-' + date));
+}
+function setSteps(date, steps) {
+  const entries = (state.days[date] && state.days[date].entries) || [];
+  if (steps > 0) state.days[date] = { date, entries, steps }; else if (entries.length) state.days[date] = { date, entries }; else delete state.days[date];
+  persist(did('day-' + date));
+}
+// Walking estimate: stride from height, and the net cost of walking, about 0.5 kcal per kg per km (ACSM walking equation).
+function stepsBurn(steps, p) {
+  const km = steps * (p.height / 100) * (p.sex === 'm' ? 0.415 : 0.413) / 1000;
+  return { km, kcal: 0.5 * p.weight * km };
 }
 
 /* ---------- routing ---------- */
@@ -1047,7 +1059,32 @@ function renderToday() {
     }
     out.push(card);
   }
+  out.push(stepsCard(date, isToday));
   return out;
+}
+function stepsCard(date, isToday) {
+  const p = state.profile, steps = getDay(date).steps || 0, goal = p.stepGoal || 8000;
+  const b = stepsBurn(steps, p);
+  const input = h('input', { type: 'number', id: 'st-in', inputmode: 'numeric', min: 0, max: 100000, step: 100, value: steps || '', placeholder: 'למשל 7500' });
+  const form = h('form', { class: 'wform', novalidate: true },
+    h('div', { class: 'field' }, h('label', { for: 'st-in' }, isToday ? 'כמה צעדים היום?' : 'כמה צעדים ביום הזה?'), input),
+    h('button', { type: 'submit', class: 'btn' }, 'שמירה'));
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const n = Math.round(+input.value || 0);
+    if (n < 0 || n > 100000) { toast('מספר הצעדים צריך להיות בין 0 ל-100,000'); return; }
+    setSteps(date, n); render();
+    toast(n ? `נשמרו ${f0(n)} צעדים` : 'הצעדים נמחקו');
+  });
+  return h('section', { class: 'card stack', 'aria-label': 'צעדים' },
+    h('div', { class: 'meal-head' }, h('h3', null, 'צעדים'),
+      steps ? h('span', { class: 'tot num' }, `כ-${f0(b.kcal)} ${KC} בהליכה · ${f1(b.km)} ק"מ`) : null),
+    steps ? h('div', { class: 'meter' },
+      h('div', { class: 'meter-top' }, h('span', { class: 'num' }, f0(steps) + ' / ' + f0(goal)),
+        steps >= goal ? h('span', { class: 'chip good' }, '✓ הגעת ליעד') : h('span', { class: 'muted small num' }, 'עוד ' + f0(goal - steps) + ' ליעד')),
+      h('div', { class: 'bar' }, h('span', { style: `width:${clamp(steps / goal * 100, 0, 100)}%;background:var(--steps)` }))) : null,
+    state.readonly ? null : form,
+    h('p', { class: 'muted small', style: 'margin:0' }, 'מקלידים את המספר מאפליקציית הצעדים. הקלוריות הן הערכה, והן לא מתווספות ליעד: רמת הפעילות בפרופיל כבר כוללת את התנועה הרגילה שלך.'));
 }
 function removeEntry(date, id) {
   const before = getDay(date).entries, e = before.find(x => x.id === id);
@@ -1081,7 +1118,7 @@ function pieIcon() {
     s('circle', { cx: 8, cy: 8, r: 6, fill: 'none', stroke: 'currentColor', 'stroke-width': 2.5, opacity: 0.35 }),
     s('path', { d: 'M8 2 A6 6 0 0 1 13.2 11 L8 8 Z', fill: 'currentColor' }));
 }
-function macroDonutBlock(t, mode, partial) {
+function macroDonutBlock(t, mode, partial, steps) {
   const p = state.profile;
   const parts = [
     { label: 'חלבון', g: t.p, k: t.p * 4, color: 'var(--protein)', r: RANGES.p },
@@ -1124,6 +1161,8 @@ function macroDonutBlock(t, mode, partial) {
     })),
     h('div', { class: 'small' }, 'חלבון: ', h('b', { class: 'num' }, `${f0(t.p)} מתוך ${f0(p.proteinTarget)} ${GR}`),
       t.p >= p.proteinTarget ? h('span', { class: 'chip good', style: 'margin-inline-start:6px' }, '✓ הושג') : null),
+    steps > 0 ? h('div', { class: 'small' }, 'צעדים: ', h('b', { class: 'num' }, f0(steps) + (mode === 'avg' ? ' ליום' : '')),
+      h('span', { class: 'muted num' }, ` · כ-${f0(stepsBurn(steps, p).kcal)} ${KC} בהליכה`)) : null,
     partial ? h('div', { class: 'muted small' }, 'היום עוד לא נגמר, אז החלוקה עוד יכולה להשתנות.') : null);
   return h('div', { class: 'donut-wrap' }, svg, info);
 }
@@ -1137,22 +1176,22 @@ function renderAnalysis(body, title) {
   const seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'תקופה' },
     [['day', sheet.date === tday ? 'היום' : 'היום שנבחר'], ['week', 'השבוע'], ['month', 'החודש']].map(([k, l]) =>
       h('button', { type: 'button', 'aria-pressed': String(per === k), onclick: () => { sheet.period = k; renderSheet(); } }, l)));
-  let t, sub, mode = 'day', partial = false, empty;
+  let t, sub, mode = 'day', partial = false, empty, steps = 0;
   if (per === 'day') {
     const day = getDay(sheet.date);
-    t = totals(day.entries); empty = !day.entries.length; partial = sheet.date === tday;
+    t = totals(day.entries); empty = !day.entries.length; partial = sheet.date === tday; steps = day.steps || 0;
     sub = sheet.date === tday ? 'היום, עד עכשיו' : dfLong.format(parseYmd(sheet.date));
   } else {
     const start = per === 'week' ? weekStart(tday) : tday.slice(0, 8) + '01';
     const sd = parseYmd(start);
     const end = per === 'week' ? addDays(start, 6) : ymd(new Date(sd.getFullYear(), sd.getMonth() + 1, 0));
     const an = analyze(rangeDates(start, end), state.days);
-    t = an.avg; mode = 'avg'; empty = !an.n;
+    t = an.avg; mode = 'avg'; empty = !an.n; steps = an.stepsAvg;
     sub = `ממוצע ליום, לפי ${an.n === 1 ? 'יום אחד' : an.n + ' ימים'} שהסתיימו (בלי היום)`;
   }
   body.replaceChildren(seg, h('div', { class: 'muted small' }, sub),
     empty ? h('p', { class: 'muted', style: 'margin:0' }, per === 'day' ? 'לא נרשם כלום ביום הזה.' : 'אין עדיין ימים שהסתיימו עם רישום בתקופה הזו.')
-      : macroDonutBlock(t, mode, partial));
+      : macroDonutBlock(t, mode, partial, steps));
 }
 function miniMeter(label, val, ref, unit, kind) {
   let chip = null, pct = 0, color = 'var(--muted)';
@@ -1230,8 +1269,11 @@ function analyze(dates, daysMap) {
     const entries = (daysMap[date] && daysMap[date].entries) || [];
     const meals = { b: 0, l: 0, d: 0, s: 0 };
     entries.forEach(e => { meals[e.meal] = (meals[e.meal] || 0) + entryKcal(e); });
-    return { date, future: date > today, partial: date === today, logged: entries.length > 0, t: totals(entries), meals, entries };
+    return { date, future: date > today, partial: date === today, logged: entries.length > 0, t: totals(entries), meals, entries,
+      steps: (daysMap[date] && daysMap[date].steps) || 0 };
   });
+  const S = rows.filter(r => r.steps > 0 && !r.partial);
+  const stepsAvg = S.length ? S.reduce((sum, r) => sum + r.steps, 0) / S.length : 0;
   // Today is still in progress, so it stays out of averages and counts.
   const L = rows.filter(r => r.logged && !r.partial), n = L.length;
   const avg = {}; NUTR.forEach(k => { avg[k] = n ? L.reduce((s, r) => s + r.t[k], 0) / n : 0; });
@@ -1243,7 +1285,7 @@ function analyze(dates, daysMap) {
   }));
   const totalK = L.reduce((s, r) => s + r.t.k, 0);
   return { rows, logged: L, n, avg, mealAvg, foods: Object.values(foods), totalK, elapsed: rows.filter(r => !r.future && !r.partial).length,
-    todayLogged: rows.some(r => r.partial && r.logged) };
+    todayLogged: rows.some(r => r.partial && r.logged), stepsDays: S.length, stepsAvg, stepsAny: rows.some(r => r.steps > 0) };
 }
 function periodInsights(an, p, isDemo) {
   const out = [], n = an.n, a = an.avg;
@@ -1284,6 +1326,12 @@ function periodInsights(an, p, isDemo) {
         ` בתקופה הזו, מ-${f1(ws[0].kg)} ל-${f1(ws[ws.length - 1].kg)}.`] });
     }
   }
+  if (an.stepsDays) {
+    const st = an.stepsAvg, goal = p.stepGoal || 8000;
+    const cat = st < 5000 ? 'מעט תנועה' : st < 7500 ? 'פעילות נמוכה' : st < 10000 ? 'פעילות בינונית' : 'פעילות גבוהה';
+    out.push({ lvl: st >= goal ? 'good' : 'info', html: ['ממוצע הצעדים: ', h('b', null, f0(st) + ' ביום'),
+      ` (${cat}). ` + (st >= goal ? 'מעל היעד שלך.' : `היעד שלך: ${f0(goal)}.`)] });
+  }
   if (a.k > 0 && an.mealAvg.s / a.k > 0.3) out.push({ lvl: 'info', html: ['נשנושים מספקים ', h('b', null, f0(an.mealAvg.s / a.k * 100) + '%'), ' מהקלוריות היומיות.'] });
   if (n >= 4) {
     const sd = Math.sqrt(an.logged.reduce((s, r) => s + (r.t.k - a.k) ** 2, 0) / n);
@@ -1311,6 +1359,7 @@ function renderPeriod(kind) {
         : 'הניתוח מתמלא מהמאכלים שרושמים במסך "היום". אחרי כמה ימים של רישום יופיעו כאן ממוצעים, גרפים ותובנות.'),
       h('div', { class: 'row' }, h('a', { class: 'btn primary', href: '#today', style: 'text-decoration:none' }, 'לרישום היום'),
         h('button', { class: 'btn', onclick: () => { state.demo[kind] = true; render(); } }, 'להציג דוגמה של ניתוח'))));
+    if (an.stepsAny) out.push(stepsSection(an, p, kind));
     return out;
   }
   const a = an.avg;
@@ -1333,7 +1382,8 @@ function renderPeriod(kind) {
     h('p', { class: 'muted small', style: 'margin:0' }, 'הקו המקווקו הוא היעד. ימים בלי רישום מסומנים בנקודה, והיום מופיע בצבע בהיר כי הוא עוד לא נגמר.')));
   out.push(h('section', { class: 'card stack' }, h('h3', null, 'חלבון ליום'),
     barChart(an.rows, r => r.t.p, p.proteinTarget, 'bar-p', GR, kind)));
-  out.push(h('section', { class: 'card stack' }, h('h3', null, 'ממה הגיעו הקלוריות (ממוצע ליום)'), macroDonutBlock(a, 'avg', false),
+  if (an.stepsAny) out.push(stepsSection(an, p, kind));
+  out.push(h('section', { class: 'card stack' }, h('h3', null, 'ממה הגיעו הקלוריות (ממוצע ליום)'), macroDonutBlock(a, 'avg', false, an.stepsAvg),
     h('div', { class: 'minis' },
       avgRow('סיבים', a.fi, GR, a.fi >= REC.fiber ? 'good' : a.fi < 18 ? 'warn' : 'info', 'המלצה: 25+'),
       avgRow('נתרן', a.na, MG, a.na > 2300 ? 'bad' : a.na > REC.sodium ? 'warn' : 'good', 'המלצה: עד 2,000'),
@@ -1376,6 +1426,12 @@ function renderPeriod(kind) {
   }
   return out;
 }
+function stepsSection(an, p, kind) {
+  return h('section', { class: 'card stack' }, h('h3', null, 'צעדים ליום'),
+    barChart(an.rows, r => r.steps, p.stepGoal || 8000, 'bar-s', 'צעדים', kind, r => r.steps > 0),
+    an.stepsDays ? h('p', { class: 'muted small', style: 'margin:0' },
+      `ממוצע ${f0(an.stepsAvg)} צעדים ביום, כ-${f0(stepsBurn(an.stepsAvg, p).kcal)} ${KC} בהליכה, לפי ${an.stepsDays === 1 ? 'יום אחד' : an.stepsDays + ' ימים'} עם צעדים.`) : null);
+}
 function tile(title, value, sub, chip) {
   return h('div', { class: 'tile' }, h('div', { class: 't' }, title), h('div', { class: 'v num' }, value),
     h('div', { class: 's row', style: 'gap:6px' }, h('span', null, sub), chip ? h('span', { class: 'chip ' + chip[0] }, chip[1]) : null));
@@ -1387,15 +1443,15 @@ function avgRow(label, v, unit, lvl, ref) {
 }
 
 /* Bar chart: one series, a dashed target line, first day on the right (RTL). */
-function barChart(rows, get, target, cls, unit, kind) {
+function barChart(rows, get, target, cls, unit, kind, has) {
   const W = 640, H = 210, padT = 14, padB = 26, padL = 8, padR = 46;
-  const vals = rows.map(r => (r.logged ? get(r) : null));
+  const vals = rows.map(r => ((has ? has(r) : r.logged) ? get(r) : null));
   const maxV = Math.max(target * 1.15, ...vals.filter(v => v != null).map(v => v * 1.08), 1);
   const step = niceStep(maxV / 4), top = Math.ceil(maxV / step) * step;
   const y = v => padT + (H - padT - padB) * (1 - v / top);
   const n = rows.length, slot = (W - padL - padR) / n, bw = Math.max(3, Math.min(34, slot * 0.62));
   const xc = i => W - padR - slot * (i + 0.5);
-  const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'גרף ' + (cls === 'bar-k' ? 'קלוריות' : 'חלבון') + ' לפי ימים' });
+  const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': 'גרף ' + ({ 'bar-k': 'קלוריות', 'bar-p': 'חלבון', 'bar-s': 'צעדים' }[cls] || '') + ' לפי ימים' });
   for (let v = 0; v <= top + 1e-9; v += step) {
     svg.append(s('line', { class: v === 0 ? 'base' : 'grid', x1: padL, x2: W - padR + 4, y1: y(v), y2: y(v) }));
     svg.append(s('text', { x: W - padR + 10, y: y(v) + 4, 'text-anchor': 'start' }, f0(v)));
@@ -1456,7 +1512,7 @@ function demoDays(dates) {
     e.push(['s', 'קפה הפוך (200 מ"ל חלב 3% + אספרסו)']);
     e.push(...pick([[['s', 'במבה']], [['s', 'תפוח עץ (עם קליפה)'], ['s', 'שקדים']], [['s', 'רוגלך שוקולד']], [['s', 'שוקולד חלב']]]));
     if (dow === 6) e.push(['l', 'גלידת שמנת, כל הטעמים חוץ משוקולד (שטראוס / נסטלה)']);
-    out[d] = { date: d, entries: e.map(x => mk(x[0], x[1])).filter(Boolean) };
+    out[d] = { date: d, entries: e.map(x => mk(x[0], x[1])).filter(Boolean), steps: Math.round((3500 + rnd() * 9000) / 10) * 10 };
   }
   return out;
 }
@@ -1660,7 +1716,7 @@ function renderProfile(onboarding) {
   const p0 = state.profile || {};
   const f = { name: p0.name || '', sex: p0.sex || '', age: p0.age || '', height: p0.height || '', weight: p0.weight || '',
     activity: p0.activity || 1.375, goal: p0.goal || 'maintain', kcalTarget: p0.kcalTarget || '', proteinTarget: p0.proteinTarget || '',
-    kcalManual: !!p0.kcalManual, proteinManual: !!p0.proteinManual };
+    kcalManual: !!p0.kcalManual, proteinManual: !!p0.proteinManual, stepGoal: p0.stepGoal || 8000 };
   const out = [];
   const others = people().filter(x => x.id !== state.pid).length;
   if (onboarding && !others) { const imp = importCard(); if (imp) out.push(imp); }
@@ -1694,7 +1750,9 @@ function renderProfile(onboarding) {
     calcBox,
     h('div', { class: 'grid2' },
       h('div', { class: 'field' }, h('label', { for: 'pf-kcal' }, 'יעד קלורי יומי (' + KC + ')'), kcalIn),
-      h('div', { class: 'field' }, h('label', { for: 'pf-prot' }, 'יעד חלבון יומי (' + GR + ')'), protIn)),
+      h('div', { class: 'field' }, h('label', { for: 'pf-prot' }, 'יעד חלבון יומי (' + GR + ')'), protIn),
+      h('div', { class: 'field' }, h('label', { for: 'pf-steps' }, 'יעד צעדים יומי'),
+        h('input', { type: 'number', id: 'pf-steps', inputmode: 'numeric', min: 1000, max: 50000, step: 500, value: f.stepGoal }))),
     h('div', { class: 'row' }, h('button', { type: 'button', class: 'btn ghost', id: 'pf-reset' }, 'חזרה ליעדים המומלצים'),
       h('span', { class: 'hint muted small' }, 'אפשר להקליד יעד אחר, למשל לפי המלצת דיאטנית.')),
     h('p', { class: 'muted small', style: 'margin:0' }, 'החישוב משתמש בנוסחת Mifflin-St Jeor ובהמלצות מקובלות לחלבון. הוא לא מתאים להריון, הנקה, גיל ההתבגרות או מצבים רפואיים. במקרים כאלה כדאי לקבוע יעדים עם דיאטנית.'),
@@ -1748,7 +1806,7 @@ function renderProfile(onboarding) {
     const kt = +kcalIn.value, pt = +protIn.value;
     if (!(kt >= 800 && kt <= 6000) || !(pt >= 20 && pt <= 400)) { errBox.textContent = 'היעד הקלורי צריך להיות בין 800 ל-6,000, ויעד החלבון בין 20 ל-400 גרם.'; return; }
     errBox.textContent = '';
-    state.profile = { ...v, kcalTarget: kt, proteinTarget: pt, kcalManual: kcalManual && kt !== c.kcal, proteinManual: protManual && pt !== c.protein,
+    state.profile = { ...v, kcalTarget: kt, proteinTarget: pt, stepGoal: clamp(Math.round(+$('#pf-steps', form).value || 8000), 1000, 50000), kcalManual: kcalManual && kt !== c.kcal, proteinManual: protManual && pt !== c.protein,
       pv: PROFILE_VERSION, created: (state.profile && state.profile.created) || (state.pid === 'main' ? 0 : Date.now()), updated: Date.now() };
     persist(did('profile'));
     syncWeighInFromProfile(v.weight);
