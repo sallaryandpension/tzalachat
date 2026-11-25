@@ -1,5 +1,5 @@
 // Offline support for the installed app. build-site.ps1 stamps the version, so every rebuild replaces the cache.
-const VERSION = '20261125020317';
+const VERSION = '20261125021248';
 const CACHE = 'tzalachat-' + VERSION;
 const GYM_PATH = new URL('./gym/', self.location.href).pathname;
 const CORE = ['./', './index.html', './foods.json', './tzameret.json', './manifest.webmanifest',

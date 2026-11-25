@@ -229,6 +229,19 @@ td.n, th.n { text-align: end; font-variant-numeric: tabular-nums; }
 .seg button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px; font-size: 14px; }
 .seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 
+/* Weight */
+.wform { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
+.wform .field { flex: 1 1 140px; }
+.wform .btn { flex: 0 0 auto; height: 42px; }
+.chart .wline { fill: none; stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.chart .warea { fill: var(--accent); opacity: 0.08; }
+.chart .wpt { fill: var(--surface); stroke: var(--accent); stroke-width: 2; }
+.chart .wpt.on { fill: var(--accent); }
+.chart .wlast { fill: var(--ink); font-weight: 600; font-size: 12px; }
+.chart .whit { fill: transparent; cursor: crosshair; }
+.wlist { max-height: 360px; overflow-y: auto; }
+.wlist .entry { cursor: default; }
+
 /* Macro pie (donut) */
 .donut-wrap { display: grid; grid-template-columns: minmax(150px, 220px) minmax(0, 1fr); gap: 18px; align-items: center; }
 @media (max-width: 520px) { .donut-wrap { grid-template-columns: 1fr; justify-items: center; } .donut-info { width: 100%; } }
@@ -276,6 +289,7 @@ td.n, th.n { text-align: end; font-variant-numeric: tabular-nums; }
         <a href="#today" data-view="today">היום</a>
         <a href="#week" data-view="week">שבוע</a>
         <a href="#month" data-view="month">חודש</a>
+        <a href="#weight" data-view="weight">משקל</a>
         <a href="#profile" data-view="profile">פרופיל</a>
       </nav>
     </div>
@@ -432,12 +446,14 @@ const state = {
   common: [], tz: [], tzLoaded: false, tzLoading: null, foodsError: false, commonCodes: new Set(),
   view: 'today', date: todayStr(), weekOff: 0, monthOff: 0, demo: { week: false, month: false }
 };
-const blank = () => ({ profile: null, days: {}, custom: [] });
-// state.profile / state.days / state.custom always mean the current user's data.
-for (const k of ['profile', 'days', 'custom']) Object.defineProperty(state, k, {
+const blank = () => ({ profile: null, days: {}, custom: [], weights: [] });
+// state.profile / state.days / state.custom / state.weights always mean the current user's data.
+for (const k of ['profile', 'days', 'custom', 'weights']) Object.defineProperty(state, k, {
   get() {
-    if (!state.pid) return k === 'days' ? {} : k === 'custom' ? [] : null;
-    return (state.all[state.pid] || (state.all[state.pid] = blank()))[k];
+    if (!state.pid) return k === 'days' ? {} : (k === 'custom' || k === 'weights') ? [] : null;
+    const b = state.all[state.pid] || (state.all[state.pid] = blank());
+    if (k === 'weights' && !b.weights) b.weights = [];
+    return b[k];
   },
   set(v) { if (state.pid) (state.all[state.pid] || (state.all[state.pid] = blank()))[k] = v; }
 });
@@ -450,6 +466,7 @@ function parseDocId(id) {
   const m = /^p-([a-z0-9]+)-(.+)$/.exec(id); if (m) { pid = m[1]; rest = m[2]; }
   if (rest === 'profile') return { pid, kind: 'profile' };
   if (rest === 'custom') return { pid, kind: 'custom' };
+  if (rest === 'weights') return { pid, kind: 'weights' };
   if (rest.startsWith('day-')) return { pid, kind: 'day', date: rest.slice(4) };
   return null;
 }
@@ -651,9 +668,10 @@ function importCard() {
 function importLocal(all) {
   for (const [pid, b] of Object.entries(all)) {
     if (!b || !b.profile) continue;
-    state.all[pid] = { profile: b.profile, days: b.days || {}, custom: b.custom || [] };
+    state.all[pid] = { profile: b.profile, days: b.days || {}, custom: b.custom || [], weights: b.weights || [] };
     const pre = pid === 'main' ? '' : 'p-' + pid + '-';
     persist(pre + 'profile'); persist(pre + 'custom');
+    if (state.all[pid].weights.length) persist(pre + 'weights');
     Object.keys(state.all[pid].days).forEach(d => persist(pre + 'day-' + d));
   }
   try { localStorage.setItem(IMPORTED_KEY, '1'); } catch (e) {}
@@ -718,6 +736,7 @@ function subscribe(col) {
       const b = all[info.pid] || (all[info.pid] = blank());
       if (info.kind === 'profile') b.profile = clone(data);
       else if (info.kind === 'custom') b.custom = clone(data.foods || []);
+      else if (info.kind === 'weights') b.weights = clone(data.list || []);
       else b.days[info.date] = clone(data);
     }
     // Keep this device's unsent edits over what the store has.
@@ -727,6 +746,7 @@ function subscribe(col) {
       const lb = state.all[info.pid], b = all[info.pid] || (all[info.pid] = blank());
       if (info.kind === 'profile') b.profile = lb ? lb.profile : null;
       else if (info.kind === 'custom') b.custom = lb ? lb.custom : [];
+      else if (info.kind === 'weights') b.weights = lb ? (lb.weights || []) : [];
       else if (lb && lb.days[info.date]) b.days[info.date] = lb.days[info.date]; else delete b.days[info.date];
     }
     if (state.pid && state.newUser && !all[state.pid]) all[state.pid] = state.all[state.pid] || blank();
@@ -755,6 +775,7 @@ function bodyFor(docId) {
   if (!b || !b.profile) return null;   // a removed user: every document of theirs is deleted
   if (info.kind === 'profile') return b.profile;
   if (info.kind === 'custom') return { foods: b.custom.map(({ id, name, v, serv }) => ({ id, name, v, serv: serv || null })) };
+  if (info.kind === 'weights') return { list: b.weights || [] };
   const day = b.days[info.date];
   return day && day.entries.length ? day : null;
 }
@@ -859,7 +880,7 @@ function setDay(date, entries) {
 /* ---------- routing ---------- */
 function route() {
   const v = (location.hash || '').slice(1);
-  const next = ['today', 'week', 'month', 'profile'].includes(v) ? v : 'today';
+  const next = ['today', 'week', 'month', 'weight', 'profile'].includes(v) ? v : 'today';
   const changed = next !== state.view;
   state.view = next;
   render();
@@ -900,6 +921,7 @@ function render() {
   if (state.view === 'today') { const ic = installCard(); if (ic) kids.push(ic); kids.push(...renderToday()); }
   else if (state.view === 'week') kids.push(...renderPeriod('week'));
   else if (state.view === 'month') kids.push(...renderPeriod('month'));
+  else if (state.view === 'weight') kids.push(...renderWeight());
   else kids.push(...renderProfile(false));
   kids.push(h('p', { class: 'foot' }, storageNote(), ' · ערכים תזונתיים: מאגר "צמרת", משרד הבריאות'));
   view.replaceChildren(...kids);
@@ -987,7 +1009,9 @@ function renderToday() {
       miniMeter('שומן רווי', t.sf, p.kcalTarget * REC.satPct / 100 / 9, GR, 'cap'),
       miniMeter('סוכרים', t.su, null, GR, 'info')),
     h('div', { class: 'row' }, h('button', { class: 'btn', type: 'button', onclick: openAnalysis }, pieIcon(), 'ניתוח'),
-      h('span', { class: 'muted small' }, 'עוגה של חלבון, פחמימות ושומן, עם הקלוריות לידה'))
+      h('button', { class: 'btn', type: 'button', onclick: () => {
+        location.hash = '#weight'; setTimeout(() => { const k = $('#wt-kg'); if (k) k.focus(); }, 80);
+      } }, scaleIcon(), 'שקילה'))
   );
   out.push(summary);
 
@@ -1221,7 +1245,7 @@ function analyze(dates, daysMap) {
   return { rows, logged: L, n, avg, mealAvg, foods: Object.values(foods), totalK, elapsed: rows.filter(r => !r.future && !r.partial).length,
     todayLogged: rows.some(r => r.partial && r.logged) };
 }
-function periodInsights(an, p) {
+function periodInsights(an, p, isDemo) {
   const out = [], n = an.n, a = an.avg;
   if (!n) return out;
   if (n < Math.min(4, an.elapsed)) out.push({ lvl: 'info', html: [`תועדו רק ${n} ימים, אז התמונה חלקית. ימים בלי רישום לא נכנסים לממוצעים.`] });
@@ -1250,6 +1274,15 @@ function periodInsights(an, p) {
     if (fatPct > 38) out.push({ lvl: 'info', html: ['השומן מספק ', h('b', null, f0(fatPct) + '%'), ' מהאנרגיה, מעל הטווח המקובל (20%–35%).'] });
     const sugPct = a.su * 4 / energy * 100;
     if (sugPct > 22) out.push({ lvl: 'warn', html: ['הרבה סוכר: ', h('b', null, f0(a.su) + ' ' + GR), ` ליום (${f0(sugPct)}% מהאנרגיה, כולל סוכר טבעי).`] });
+  }
+  if (!isDemo && an.rows.length) {
+    const from = an.rows[0].date, to = an.rows[an.rows.length - 1].date;
+    const ws = state.weights.filter(w => w.date >= from && w.date <= to).sort((x, y) => (x.date < y.date ? -1 : 1));
+    if (ws.length >= 2) {
+      const d = ws[ws.length - 1].kg - ws[0].kg;
+      out.push({ lvl: 'info', html: ['המשקל ', h('b', null, Math.abs(d) < 0.05 ? 'לא השתנה' : (d < 0 ? 'ירד ב-' : 'עלה ב-') + f1(Math.abs(d)) + ' ק"ג'),
+        ` בתקופה הזו, מ-${f1(ws[0].kg)} ל-${f1(ws[ws.length - 1].kg)}.`] });
+    }
   }
   if (a.k > 0 && an.mealAvg.s / a.k > 0.3) out.push({ lvl: 'info', html: ['נשנושים מספקים ', h('b', null, f0(an.mealAvg.s / a.k * 100) + '%'), ' מהקלוריות היומיות.'] });
   if (n >= 4) {
@@ -1293,7 +1326,7 @@ function renderPeriod(kind) {
     tile('ימים עם מספיק חלבון', `${protHit}/${an.n}`, '90% מהיעד ומעלה', null)));
   out.splice(isDemo ? 2 : 1, 0, h('p', { class: 'muted small', style: 'margin:-8px 0 0;text-align:center' },
     `תועדו ${an.n} מתוך ${an.elapsed} ימים שהסתיימו` + (an.todayLogged ? '. היום לא נכלל כי הוא עוד לא נגמר.' : '.')));
-  const ins = periodInsights(an, p);
+  const ins = periodInsights(an, p, isDemo);
   if (ins.length) out.push(h('section', { class: 'card stack' }, h('h2', null, 'מה עולה מהנתונים'), insightList(ins)));
   out.push(h('section', { class: 'card stack' }, h('h3', null, 'קלוריות ליום'),
     barChart(an.rows, r => r.t.k, p.kcalTarget, 'bar-k', KC, kind),
@@ -1428,6 +1461,200 @@ function demoDays(dates) {
   return out;
 }
 
+/* ---------- WEIGHT: weigh-ins update the profile and draw a chart ---------- */
+const KG = 'ק"ג';
+const byDate = (a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+const latestWeight = list => (list.length ? list.reduce((a, b) => (b.date > a.date ? b : a)) : null);
+const diffWords = d => (Math.abs(d) < 0.05 ? 'ללא שינוי' : (d < 0 ? 'ירידה' : 'עלייה'));
+// The latest weigh-in is the profile's weight; targets that are not set by hand follow it.
+function applyLatestWeight() {
+  const p = state.profile, last = latestWeight(state.weights);
+  if (!p || !last || last.kg === p.weight) return null;
+  const next = { ...p, weight: last.kg, updated: Date.now() };
+  const c = calc(next), changes = [];
+  if (!p.kcalManual && c.kcal !== p.kcalTarget) { next.kcalTarget = c.kcal; changes.push('יעד קלורי ' + f0(c.kcal)); }
+  if (!p.proteinManual && c.protein !== p.proteinTarget) { next.proteinTarget = c.protein; changes.push('יעד חלבון ' + f0(c.protein) + ' ' + GR); }
+  state.profile = next; persist(did('profile'));
+  return { kg: last.kg, changes };
+}
+// A weight typed in the profile form is also a weigh-in for today.
+function syncWeighInFromProfile(kg) {
+  const last = latestWeight(state.weights);
+  if (!kg || (last && last.kg === kg)) return;
+  const today = todayStr();
+  state.weights = state.weights.filter(w => w.date !== today).concat([{ date: today, kg, t: Date.now() }]).sort(byDate);
+  persist(did('weights'));
+}
+function saveWeighIn(date, kg) {
+  state.weights = state.weights.filter(w => w.date !== date).concat([{ date, kg: Math.round(kg * 10) / 10, t: Date.now() }]).sort(byDate);
+  persist(did('weights'));
+  const res = applyLatestWeight();
+  render();
+  toast(res ? `נשמר. המשקל בפרופיל עודכן ל-${f1(res.kg)} ${KG}` + (res.changes.length ? `, ${res.changes.join(', ')}` : '') : 'השקילה נשמרה');
+}
+function removeWeighIn(date) {
+  const before = state.weights;
+  if (!before.some(w => w.date === date)) return;
+  state.weights = before.filter(w => w.date !== date); persist(did('weights'));
+  applyLatestWeight(); render();
+  toast('השקילה נמחקה', 'ביטול', () => { state.weights = before; persist(did('weights')); applyLatestWeight(); render(); });
+}
+function scaleIcon() {
+  return s('svg', { viewBox: '0 0 16 16', width: 16, height: 16, 'aria-hidden': 'true', style: 'vertical-align:-3px;margin-inline-end:6px' },
+    s('rect', { x: 1.5, y: 1.5, width: 13, height: 13, rx: 3, fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6 }),
+    s('path', { d: 'M5 6 A3.5 3.5 0 0 1 11 6', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.6 }),
+    s('path', { d: 'M8 6.5 L9.6 4.6', stroke: 'currentColor', 'stroke-width': 1.6, 'stroke-linecap': 'round' }));
+}
+// kg per week, from a least-squares line over the last 8 weeks (needs 3+ weigh-ins over 2+ weeks)
+function weightRate(list) {
+  const pts = list.filter(w => w.date >= addDays(todayStr(), -56));
+  if (pts.length < 3) return null;
+  const t0 = parseYmd(pts[0].date).getTime();
+  const xs = pts.map(w => (parseYmd(w.date).getTime() - t0) / (7 * 86400000)), ys = pts.map(w => w.kg);
+  if (xs[xs.length - 1] < 2) return null;
+  const mx = xs.reduce((a, b) => a + b, 0) / xs.length, my = ys.reduce((a, b) => a + b, 0) / ys.length;
+  let num = 0, den = 0;
+  xs.forEach((x, i) => { num += (x - mx) * (ys[i] - my); den += (x - mx) ** 2; });
+  return den ? num / den : null;
+}
+function rateInsight(rate, goal) {
+  const r = Math.abs(rate) < 0.05 ? 'יציב' : (rate < 0 ? 'ירידה' : 'עלייה') + ` של כ-${f1(Math.abs(rate))} ${KG} בשבוע`;
+  const base = ['הקצב בשמונת השבועות האחרונים: ', h('b', null, r), '. '];
+  if (goal === 'lose' || goal === 'lose_slow') {
+    const fast = goal === 'lose' ? -0.9 : -0.7, slow = goal === 'lose' ? -0.2 : -0.1;
+    if (rate < fast) return { lvl: 'warn', html: [...base, 'זו ירידה מהירה מהמומלץ (עד כ-1 ' + KG + ' בשבוע).'] };
+    if (rate <= slow) return { lvl: 'good', html: [...base, 'הקצב מתאים למטרה שלך.'] };
+    return { lvl: 'info', html: [...base, goal === 'lose' ? 'זה לאט מהמטרה (כחצי ' + KG + ' בשבוע).' : 'זה לאט מהמטרה (כרבע ' + KG + ' בשבוע).'] };
+  }
+  if (goal === 'gain') {
+    if (rate > 0.6) return { lvl: 'warn', html: [...base, 'זו עלייה מהירה מהמומלץ.'] };
+    if (rate >= 0.1) return { lvl: 'good', html: [...base, 'הקצב מתאים למטרה שלך.'] };
+    return { lvl: 'info', html: [...base, 'זה לאט מהמטרה.'] };
+  }
+  return Math.abs(rate) <= 0.2 ? { lvl: 'good', html: [...base, 'המשקל נשמר, כמו המטרה.'] } : { lvl: 'info', html: [...base, 'המטרה היא שמירה על המשקל.'] };
+}
+const WRANGES = [['30', 'חודש', 30], ['90', '3 חודשים', 90], ['365', 'שנה', 365], ['all', 'הכול', 0]];
+let weightRange = '90';
+function renderWeight() {
+  const p = state.profile, list = [...state.weights].sort(byDate), out = [];
+  const today = todayStr();
+  const kgIn = h('input', { type: 'number', id: 'wt-kg', inputmode: 'decimal', step: 0.1, min: 25, max: 350, placeholder: f1(p.weight) });
+  const dateIn = h('input', { type: 'date', id: 'wt-date', value: today, max: today });
+  const err = h('div', { class: 'err', role: 'alert' });
+  const form = h('form', { class: 'wform', novalidate: true },
+    h('div', { class: 'field' }, h('label', { for: 'wt-kg' }, 'משקל (' + KG + ')'), kgIn),
+    h('div', { class: 'field' }, h('label', { for: 'wt-date' }, 'תאריך'), dateIn),
+    h('button', { type: 'submit', class: 'btn primary' }, 'שמירת שקילה'));
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    const kg = parseFloat(kgIn.value);
+    if (!(kg >= 25 && kg <= 350)) { err.textContent = 'צריך משקל בין 25 ל-350 ' + KG + '.'; return; }
+    if (!dateIn.value || dateIn.value > today) { err.textContent = 'צריך תאריך של היום או לפני.'; return; }
+    saveWeighIn(dateIn.value, kg);
+  });
+  out.push(h('section', { class: 'card stack', 'aria-label': 'שקילה' }, h('h2', null, 'שקילה'),
+    h('p', { class: 'muted small', style: 'margin:0' }, 'השקילה האחרונה מעדכנת את המשקל בפרופיל'
+      + (p.kcalManual && p.proteinManual ? '.' : ', ואיתו את היעדים שמחושבים אוטומטית.') + ' הכי מדויק להישקל בבוקר, לפני שאוכלים.'),
+    state.readonly ? null : form, err));
+  if (!list.length) {
+    out.push(h('section', { class: 'card stack' }, h('h3', null, 'גרף שקילות'),
+      h('p', { class: 'muted', style: 'margin:0' }, 'עוד אין שקילות. אחרי שתי שקילות יופיע כאן גרף.')));
+    return out;
+  }
+  const last = latestWeight(list), first = list[0];
+  const goodDir = p.goal === 'gain' ? 1 : p.goal === 'maintain' ? 0 : -1;
+  const chipFor = d => {
+    if (Math.abs(d) < 0.05) return ['info', 'ללא שינוי'];
+    const lvl = goodDir === 0 ? (Math.abs(d) <= 1 ? 'good' : 'info') : (Math.sign(d) === goodDir ? 'good' : 'warn');
+    return [lvl, (d < 0 ? '↓ ' : '↑ ') + diffWords(d)];
+  };
+  const older = list.filter(w => w.date <= addDays(today, -30)), ref30 = older.length ? older[older.length - 1] : null;
+  const bmi = last.kg / ((p.height / 100) ** 2);
+  out.push(h('div', { class: 'tiles' },
+    tile('משקל נוכחי', f1(last.kg) + ' ' + KG, 'נשקל ' + (last.date === today ? 'היום' : dfShort.format(parseYmd(last.date))), null),
+    tile('מאז השקילה הראשונה', f1(Math.abs(last.kg - first.kg)) + ' ' + KG, 'מאז ' + dfShort.format(parseYmd(first.date)), list.length > 1 ? chipFor(last.kg - first.kg) : null),
+    tile('ב-30 הימים האחרונים', ref30 ? f1(Math.abs(last.kg - ref30.kg)) + ' ' + KG : '—', ref30 ? 'לעומת ' + f1(ref30.kg) + ' ' + KG : 'אין שקילה מלפני חודש', ref30 ? chipFor(last.kg - ref30.kg) : null),
+    tile('BMI', f1(bmi), bmiLabel(bmi), null)));
+  const rate = weightRate(list);
+  if (rate != null) out.push(h('section', { class: 'card stack' }, insightList([rateInsight(rate, p.goal)])));
+
+  const rg = WRANGES.find(r => r[0] === weightRange) || WRANGES[1];
+  const shown = rg[2] ? list.filter(w => w.date >= addDays(today, -rg[2])) : list;
+  const seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'טווח הגרף' }, WRANGES.map(r =>
+    h('button', { type: 'button', 'aria-pressed': String(r[0] === weightRange), onclick: () => { weightRange = r[0]; render(); } }, r[1])));
+  out.push(h('section', { class: 'card stack' }, h('h3', null, 'גרף שקילות'), seg,
+    shown.length >= 2 ? weightChart(shown)
+      : h('p', { class: 'muted', style: 'margin:0' }, shown.length ? 'בטווח הזה יש רק שקילה אחת. אפשר לבחור טווח ארוך יותר.' : 'אין שקילות בטווח הזה.')));
+
+  const rows = [...list].reverse();
+  out.push(h('section', { class: 'card stack' }, h('h3', null, 'כל השקילות'),
+    h('div', { class: 'wlist' }, h('ul', { class: 'entries', style: 'margin:0' }, rows.map((w, i) => {
+      const prev = rows[i + 1], d = prev ? w.kg - prev.kg : null;
+      return h('li', { class: 'entry-row' },
+        h('div', { class: 'entry' }, h('span', { class: 'n num' }, f1(w.kg) + ' ' + KG),
+          h('span', { class: 'a' }, DOW[parseYmd(w.date).getDay()] + ' ' + dfShort.format(parseYmd(w.date))
+            + (d == null ? '' : Math.abs(d) < 0.05 ? ' · ללא שינוי' : ` · ${diffWords(d)} של ${f1(Math.abs(d))}`))),
+        state.readonly ? null : h('div', { class: 'entry-actions' },
+          h('button', { class: 'icon-btn sm', type: 'button', title: 'מחיקה', 'aria-label': 'מחיקת השקילה מ-' + dfShort.format(parseYmd(w.date)), onclick: () => removeWeighIn(w.date) }, '✕')));
+    })))));
+  return out;
+}
+/* Line chart of weight over time; the earliest weigh-in on the right (RTL). */
+function weightChart(list) {
+  const W = 640, H = 230, padT = 18, padB = 28, padL = 14, padR = 50;
+  const pts = list.map(w => ({ t: parseYmd(w.date).getTime(), kg: w.kg, date: w.date }));
+  const t0 = pts[0].t, t1 = pts[pts.length - 1].t, span = t1 - t0;
+  let lo = Math.min(...pts.map(q => q.kg)), hi = Math.max(...pts.map(q => q.kg));
+  const padK = Math.max(0.5, (hi - lo) * 0.15); lo -= padK; hi += padK;
+  const step = niceStep((hi - lo) / 4); lo = Math.floor(lo / step) * step; hi = Math.ceil(hi / step) * step;
+  const plotW = W - padL - padR;
+  const x = t => (span ? padL + plotW * (1 - (t - t0) / span) : padL + plotW / 2);
+  const y = v => padT + (H - padT - padB) * (1 - (v - lo) / (hi - lo));
+  const svg = s('svg', { viewBox: `0 0 ${W} ${H}`, role: 'img', 'aria-label': `גרף משקל: מ-${f1(pts[0].kg)} ל-${f1(pts[pts.length - 1].kg)} קילוגרם` });
+  for (let v = lo; v <= hi + 1e-9; v += step) {
+    svg.append(s('line', { class: 'grid', x1: padL, x2: W - padR + 4, y1: y(v), y2: y(v) }));
+    svg.append(s('text', { x: W - padR + 10, y: y(v) + 4, 'text-anchor': 'start' }, f1(v)));
+  }
+  const nx = span ? 4 : 0;
+  for (let i = 0; i <= nx; i++) {
+    const t = t0 + span * i / (nx || 1);
+    svg.append(s('text', { x: x(t), y: H - 8, 'text-anchor': i === 0 ? 'end' : i === nx ? 'start' : 'middle' }, dfShort.format(new Date(t))));
+  }
+  const line = pts.map((q, i) => (i ? 'L' : 'M') + x(q.t).toFixed(1) + ',' + y(q.kg).toFixed(1)).join(' ');
+  svg.append(s('path', { class: 'warea', d: line + ` L${x(t1).toFixed(1)},${y(lo).toFixed(1)} L${x(t0).toFixed(1)},${y(lo).toFixed(1)} Z` }));
+  svg.append(s('path', { class: 'wline', d: line }));
+  const marks = pts.map((q, i) => (pts.length <= 60 || i === pts.length - 1 ? s('circle', { class: 'wpt', cx: x(q.t), cy: y(q.kg), r: 4 }) : null));
+  marks.forEach(m => { if (m) svg.append(m); });
+  // Label the latest weigh-in on the side away from the incoming line.
+  const lp = pts[pts.length - 1], pp = pts[pts.length - 2];
+  const below = pp && pp.kg > lp.kg;
+  svg.append(s('text', { class: 'wlast', x: x(lp.t) + 2, y: y(lp.kg) + (below ? 18 : -10), 'text-anchor': 'start' }, f1(lp.kg)));
+  // Hover / tap: the nearest weigh-in
+  const wrap = h('div', { class: 'chart' }), tip = h('div', { class: 'tip', hidden: true });
+  let on = null;
+  const hit = s('rect', { class: 'whit', x: padL, y: padT, width: plotW, height: H - padT - padB, tabindex: 0, 'aria-label': 'פרטי שקילה' });
+  const showAt = i => {
+    const q = pts[i];
+    if (on) on.classList.remove('on');
+    on = marks[i]; if (on) on.classList.add('on');
+    tip.replaceChildren(h('b', null, DOW[parseYmd(q.date).getDay()] + ' ' + dfShort.format(parseYmd(q.date))), ' · ' + f1(q.kg) + ' ' + KG);
+    tip.hidden = false; tip.style.left = (x(q.t) / W * 100) + '%'; tip.style.top = (y(q.kg) / H * 100 - 3) + '%';
+  };
+  const nearest = e => {
+    const r = svg.getBoundingClientRect(), px = (e.clientX - r.left) / r.width * W;
+    let best = 0; pts.forEach((q, i) => { if (Math.abs(x(q.t) - px) < Math.abs(x(pts[best].t) - px)) best = i; });
+    return best;
+  };
+  hit.addEventListener('pointermove', e => showAt(nearest(e)));
+  hit.addEventListener('click', e => showAt(nearest(e)));
+  hit.addEventListener('focus', () => showAt(pts.length - 1));
+  const hide = () => { tip.hidden = true; if (on) { on.classList.remove('on'); on = null; } };
+  hit.addEventListener('pointerleave', hide); hit.addEventListener('blur', hide);
+  svg.append(hit);
+  wrap.append(svg, tip);
+  return wrap;
+}
+
 /* ---------- PROFILE / ONBOARDING ---------- */
 function renderProfile(onboarding) {
   const p0 = state.profile || {};
@@ -1524,6 +1751,7 @@ function renderProfile(onboarding) {
     state.profile = { ...v, kcalTarget: kt, proteinTarget: pt, kcalManual: kcalManual && kt !== c.kcal, proteinManual: protManual && pt !== c.protein,
       pv: PROFILE_VERSION, created: (state.profile && state.profile.created) || (state.pid === 'main' ? 0 : Date.now()), updated: Date.now() };
     persist(did('profile'));
+    syncWeighInFromProfile(v.weight);
     if (onboarding) { state.newUser = false; rememberPid(state.pid); toast('נשמר. אפשר להתחיל לרשום.'); location.hash = '#today'; route(); }
     else { toast('הפרופיל נשמר'); render(); }
   });
@@ -1565,7 +1793,7 @@ function renderProfile(onboarding) {
   return out;
 }
 async function deleteAll() {
-  const ids = ['profile', 'custom', ...Object.keys(state.days).map(d => 'day-' + d)].map(did);
+  const ids = ['profile', 'custom', 'weights', ...Object.keys(state.days).map(d => 'day-' + d)].map(did);
   delete state.all[state.pid];
   for (const id of ids) persist(id);
   state.pid = null; state.newUser = false; indexCustom(); rememberPid(LOGGED_OUT);
