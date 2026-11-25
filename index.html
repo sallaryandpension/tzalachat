@@ -370,6 +370,10 @@ fieldset.field { border: 0; margin: 0; padding: 0; min-width: 0; }
 .dl-row { display: grid; grid-template-columns: 12px 1fr auto; gap: 2px 8px; align-items: center; }
 .dl-row i { width: 12px; height: 12px; border-radius: 3px; }
 .dl-row .dl-sub { grid-column: 2 / -1; font-size: var(--fs-xs); }
+.prot-src { border-top: 1px solid var(--line); padding-top: 16px; }
+.prot-src h3 { font-size: var(--fs-l); }
+.src-list { display: grid; gap: 10px; }
+.src-row { display: grid; grid-template-columns: minmax(7.5em, 34%) minmax(0, 1fr) auto; gap: 10px; align-items: center; font-size: var(--fs-s); }
 
 /* Users, sign-in */
 .avatar { width: 42px; height: 42px; flex: none; border-radius: 50%; display: grid; place-items: center; background: var(--accent-soft); color: var(--accent-ink); font-family: var(--f-display); font-weight: 600; font-size: 18px; }
@@ -1382,22 +1386,23 @@ function renderAnalysis(body, title) {
   const seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'תקופה' },
     [['day', sheet.date === tday ? 'היום' : 'היום שנבחר'], ['week', 'השבוע'], ['month', 'החודש']].map(([k, l]) =>
       h('button', { type: 'button', 'aria-pressed': String(per === k), onclick: () => { sheet.period = k; renderSheet(); } }, l)));
-  let t, sub, mode = 'day', partial = false, empty, steps = 0;
+  let t, sub, mode = 'day', partial = false, empty, steps = 0, dayLists = [];
   if (per === 'day') {
     const day = getDay(sheet.date);
-    t = totals(day.entries); empty = !day.entries.length; partial = sheet.date === tday; steps = day.steps || 0;
+    t = totals(day.entries); empty = !day.entries.length; partial = sheet.date === tday; steps = day.steps || 0; dayLists = [day.entries];
     sub = sheet.date === tday ? 'היום, עד עכשיו' : dfLong.format(parseYmd(sheet.date));
   } else {
     const start = per === 'week' ? weekStart(tday) : tday.slice(0, 8) + '01';
     const sd = parseYmd(start);
     const end = per === 'week' ? addDays(start, 6) : ymd(new Date(sd.getFullYear(), sd.getMonth() + 1, 0));
     const an = analyze(rangeDates(start, end), state.days);
-    t = an.avg; mode = 'avg'; empty = !an.n; steps = an.stepsAvg;
+    t = an.avg; mode = 'avg'; empty = !an.n; steps = an.stepsAvg; dayLists = an.logged.map(r => r.entries);
     sub = `ממוצע ליום, לפי ${an.n === 1 ? 'יום אחד' : an.n + ' ימים'} שהסתיימו (בלי היום)`;
   }
   body.replaceChildren(seg, h('div', { class: 'muted small' }, sub),
     empty ? h('p', { class: 'muted', style: 'margin:0' }, per === 'day' ? 'לא נרשם כלום ביום הזה.' : 'אין עדיין ימים שהסתיימו עם רישום בתקופה הזו.')
-      : macroDonutBlock(t, mode, partial, steps));
+      : macroDonutBlock(t, mode, partial, steps),
+    empty ? null : proteinSourcesBlock(dayLists, per, partial));
 }
 function miniMeter(label, val, ref, unit, kind) {
   let chip = null, pct = 0, color = 'var(--muted)';
@@ -1446,6 +1451,130 @@ function proteinSuggestions(protLeft, kcalLeft) {
   const used = new Set(), pick = [];
   for (const x of cands) { if (used.has(x.f.cat)) continue; used.add(x.f.cat); pick.push(x.f); if (pick.length === 3) break; }
   return pick;
+}
+/* ---------- PROTEIN SOURCES: where the protein came from, and how to improve the mix ---------- */
+// [label, quality]: 'hi' = complete protein (animal foods, soy); 'mid' = legumes (complete together with grains); 'lo' = the rest.
+const PROT_SRC = {
+  dairy: ['מוצרי חלב', 'hi'], eggs: ['ביצים', 'hi'], poultry: ['עוף והודו', 'hi'], red: ['בשר אדום', 'hi'],
+  processed: ['בשר מעובד', 'hi'], fish: ['דגים', 'hi'], soy: ['סויה וטופו', 'hi'], supp: ['אבקות וחטיפי חלבון', 'hi'],
+  legumes: ['קטניות', 'mid'], grains: ['לחם ודגנים', 'lo'], nuts: ['אגוזים וזרעים', 'lo'], other: ['מאכלים אחרים', 'lo']
+};
+// First match wins, so the specific rules come before the general ones.
+const PROT_RULES = [
+  ['grains', /שקדי מרק|קניידל|^(פסטה|אטריות|ספגטי|מקרוני)/],
+  ['supp', /אבקת חלבון|חטיף חלבון|שייק חלבון|משקה חלבון|פרוטאין|whey/i],
+  ['processed', /נקניק|פסטרמה|סלמי|קבנוס|מורטדלה|פפרוני|קורנביף|בייקון|צ'וריסו/],
+  ['fish', /(^|[\s(])דג(ים|י)?(?=$|[\s,()])|טונה|סלמון|סרדין|אמנון|מושט|דניס|לברק|בורי|הרינג|מקרל|הייק|בקלה|מרלוזה|נסיכת הנילוס|חריימה|טילאפיה|פורל|שרימפס|קלמרי|פירות ים|סושי עם דג|גפילטע|לוקוס|אנשובי/],
+  ['soy', /טופו|סויה|אדממה|טמפה/],
+  ['other', /(חלב|משקה) (שקדים|שיבולת|אורז|קוקוס)|שניצל תירס|צמחוני/],
+  ['nuts', /אגוזי? הודו|קוקוס/],
+  ['eggs', /ביצ(ה|ים|ת)|חביתה|שקשוקה|חלמון/],
+  ['poultry', /עוף|הודו|פרגית|פרגיות|שניצל|כנפיים|שוקיים|חזה|נאגטס|שווארמה|מעורב ירושלמי|כבד קצוץ/],
+  ['red', /בקר|כבש|טלה|עגל|אנטריקוט|סטייק|המבורגר|קבב|בשר|צלעות|אסאדו|ביג מק|חמין|קובה/],
+  ['legumes', /עדש|חומוס|שעועית|אפונה|(^|\s)פול(?=$|[\s,(])|פלאפל|מג'דר|לוביה|קטניות|גרגרי/],
+  ['dairy', /חלב(?![וה])|גבינ|קוטג|יוגורט|^(לבנה|לאבנה)|שמנת|מעדן|קפיר|ריקוטה|מוצרלה|פטה|צפתית|בולגרית|^לבן(?=$|\s)|^אשל|שוקו(?!ל)|פודינג|חמאה(?!ת)|פיצה|בלינצ'ס/],
+  ['nuts', /אגוז|שקד|בוטנ|קשיו|פיסטוק|פקאן|לוז|גרעיני|זרעי|טחינה|חלבה|חלווה|צ'יה|פשתן|שומשום|מקדמיה/],
+  ['grains', /לחם|פית(ה|ות)|חלה|לחמני|באגט|בגט|בייגל|טוסט|קרקר|פריכי|אורז|פסטה|אטרי|קוסקוס|בורגול|פתיתים|קינואה|כוסמת|שיבולת|קוואקר|גרנולה|דגני|דגנים|קורנפלקס|בורקס|מלאוו|ג'חנון|לאפה|טורטי|עוגי|עוגה|עוגת|מאפה|קרואסון|פנקייק|מצה|תירס/]
+];
+const PROT_CAT = { dairy: 'dairy', eggs: 'eggs', meat: 'red', fish: 'fish', legumes: 'legumes', bread: 'grains', cereal: 'grains', sides: 'grains', nuts: 'nuts', bars: 'grains' };
+let commonCat = null;
+function protSource(name) {
+  const n = String(name);
+  for (const [g, re] of PROT_RULES) if (re.test(n)) return g;
+  if (!commonCat && state.common.length) commonCat = new Map(state.common.map(f => [f.name, f.cat]));
+  return PROT_CAT[commonCat && commonCat.get(n)] || 'other';
+}
+function proteinMix(entries) {
+  const by = {}, foods = {}; let tot = 0;
+  for (const e of entries) {
+    const p = entryProt(e); if (!(p > 0)) continue;
+    const g = protSource(e.name);
+    by[g] = (by[g] || 0) + p; tot += p;
+    const f = foods[g] || (foods[g] = {}); f[e.name] = (f[e.name] || 0) + p;
+  }
+  const groups = Object.keys(by).sort((a, b) => by[b] - by[a]);
+  const share = g => (tot ? (by[g] || 0) / tot : 0);
+  const topFood = g => { const top = Object.entries(foods[g] || {}).sort((a, b) => b[1] - a[1])[0]; return top ? top[0] : ''; };
+  return { by, tot, groups, share, topFood };
+}
+// Good everyday protein foods from other sources: the leanest serving of each source, one per source.
+function protAlternatives(exclude, prefer) {
+  const order = (prefer || ['fish', 'legumes', 'eggs', 'dairy', 'poultry', 'red']).filter(g => !exclude.includes(g));
+  const best = {};
+  for (const f of state.common) {
+    if (!PROTEIN_CATS.has(f.cat) || f.v[1] == null || !f.v[0]) continue;
+    if (/מטוגן|נקניק|פסטרמה|מיונז|מעורב|בשמן/.test(f.name)) continue;
+    const g = protSource(f.name); if (!order.includes(g)) continue;
+    const p = f.v[1] * f.serv.g / 100, k = f.v[0] * f.serv.g / 100;
+    if (p < 6) continue;
+    if (!best[g] || p / k > best[g].sc) best[g] = { f, sc: p / k };
+  }
+  return order.filter(g => best[g]).slice(0, 3).map(g => best[g].f);
+}
+function proteinAdvice(dayLists, per, partial) {
+  const n = Math.max(1, dayLists.length), m = proteinMix(dayLists.flat()), out = [];
+  if (m.tot / n < 10) {
+    out.push({ lvl: 'info', html: [partial ? 'עד עכשיו נרשם מעט חלבון, אז עוד מוקדם לנתח את המקורות.' : 'נרשם מעט חלבון, אז אין מספיק כדי לנתח את המקורות.'] });
+    return { m, out };
+  }
+  const pct = g => Math.round(m.share(g) * 100), L = g => PROT_SRC[g][0];
+  const tierShare = t => m.groups.filter(g => PROT_SRC[g][1] === t).reduce((sum, g) => sum + m.share(g), 0);
+  const hi = tierShare('hi'), mid = tierShare('mid'), lo = Math.max(0, 1 - hi - mid);
+  const main = m.groups.filter(g => m.share(g) >= 0.1), top = m.groups[0];
+  const when = per === 'week' ? 'השבוע' : per === 'month' ? 'החודש' : partial ? 'היום' : 'ביום הזה';
+  const longer = per !== 'day';
+  const ideas = (exclude, prefer) => protAlternatives(exclude, prefer).flatMap(f =>
+    [h('br'), h('b', null, f.name), `, ${f.serv.label}: ${f0(f.v[1] * f.serv.g / 100)} ${GR} חלבון, ${f0(f.v[0] * f.serv.g / 100)} ${KC}`]);
+  const fishDays = dayLists.filter(es => es.reduce((sum, e) => sum + (protSource(e.name) === 'fish' ? entryProt(e) : 0), 0) >= 5).length;
+  let single = false, weak = false;
+
+  if (m.share('processed') >= 0.2 && m.by.processed / n >= 6) out.push({ lvl: 'warn', html: [
+    `${pct('processed')}% מהחלבון ${when} הגיע מבשר מעובד, בעיקר מ`, h('b', null, m.topFood('processed')),
+    '. בשר מעובד עשיר בנתרן ובחומרים משמרים, וההמלצה היא לאכול ממנו מעט. אפשר להחליף ב:', ...ideas(['processed', 'red'], ['poultry', 'fish', 'eggs', 'dairy'])] });
+  if (m.share(top) >= 0.7 && top !== 'other' && top !== 'processed') {
+    single = true;
+    out.push(partial
+      ? { lvl: 'info', html: [`עד עכשיו ${pct(top)}% מהחלבון הגיע מ${L(top)}, בעיקר מ`, h('b', null, m.topFood(top)), '. בהמשך היום כדאי לבחור מקור אחר, למשל:', ...ideas([top])] }
+      : { lvl: 'warn', html: [`${pct(top)}% מהחלבון ${when} הגיע ממקור אחד, ${L(top)}, ובעיקר מ`, h('b', null, m.topFood(top)),
+        '. כדאי לגוון, כי כל מקור מביא איתו ויטמינים ומינרלים אחרים. אפשר להוסיף:', ...ideas([top])] });
+  }
+  if (lo >= 0.5 && !(single && PROT_SRC[top][1] === 'lo')) {
+    weak = true;
+    const names = m.groups.filter(g => PROT_SRC[g][1] === 'lo' && m.share(g) >= 0.05).map(L).join(' ומ');
+    out.push({ lvl: 'warn', html: [`${Math.round(lo * 100)}% מהחלבון ${when} הגיע מ${names}. בחלבון מהם חסרות חלק מחומצות האמינו החיוניות, ולכן הגוף מנצל אותו פחות טוב. כדאי להוסיף מקור חלבון מלא:`,
+      ...ideas([], ['eggs', 'dairy', 'legumes', 'fish', 'poultry'])] });
+  } else if (single && PROT_SRC[top][1] === 'lo') weak = true;
+  if (longer && top === 'red' && m.share('red') >= 0.45 && !single) out.push({ lvl: 'info', html: [
+    `${pct('red')}% מהחלבון ${when} הגיע מבשר אדום. ההמלצה היא עד כ-3 מנות בשבוע, ולגוון עם עוף, דגים וקטניות.`] });
+  if (longer && n >= 4 && !fishDays) out.push({ lvl: 'info', html: [
+    `לא נרשמו דגים ${when}. ההמלצה היא דגים פעמיים בשבוע, ובעיקר דגים שמנים כמו סלמון, בגלל האומגה 3.`] });
+  const hadWarn = out.length > 0, hadStrong = out.some(x => x.lvl === 'warn');
+
+  // What went well (only when nothing above needs fixing)
+  const good = [];
+  if (main.length >= 3 && !single) good.push({ lvl: 'good', html: [`גיוון יפה: החלבון ${when} הגיע מ-${main.length} מקורות עיקריים: `, h('b', null, main.map(L).join(', ')), '.'] });
+  const quality = hi + mid - m.share('processed') - m.share('supp');
+  if (quality >= 0.7 && !weak) good.push({ lvl: 'good', html: [`${Math.round(quality * 100)}% מהחלבון ממקורות איכותיים: מזון מן החי, סויה וקטניות.`] });
+  if (mid >= 0.15 && m.share('grains') >= 0.15) good.push({ lvl: 'good', html: ['קטניות יחד עם דגנים (כמו חומוס ופיתה) משלימים זה את זה, כך שהחלבון הצמחי מנוצל טוב יותר.'] });
+  if (longer ? fishDays >= Math.max(1, Math.round(n / 7 * 2)) : m.by.fish >= 5) good.push({ lvl: 'good', html: [longer ? `דגים ב-${fishDays} ימים, מקור טוב לאומגה 3.` : 'יש דגים בתפריט, מקור טוב לאומגה 3.'] });
+  else if (m.share('legumes') >= 0.1 && !(mid >= 0.15 && m.share('grains') >= 0.15)) good.push({ lvl: 'good', html: ['קטניות בתפריט: חלבון שמגיע יחד עם סיבים תזונתיים.'] });
+  if (!hadStrong) out.push(...good.slice(0, 3));
+  if (!hadWarn && main.length < 3 && !partial) out.push({ lvl: 'info', html: ['המקורות תקינים. כדי לגוון עוד אפשר להוסיף:', ...ideas(m.groups)] });
+  return { m, out };
+}
+function proteinSourcesBlock(dayLists, per, partial) {
+  const { m, out } = proteinAdvice(dayLists, per, partial);
+  const n = Math.max(1, dayLists.length);
+  let rows = m.groups.map(g => ({ label: PROT_SRC[g][0], g: m.by[g], share: m.share(g) }));
+  if (rows.length > 5) rows = rows.slice(0, 4).concat({ label: 'שאר המקורות', g: rows.slice(4).reduce((s, r) => s + r.g, 0), share: rows.slice(4).reduce((s, r) => s + r.share, 0) });
+  return h('section', { class: 'prot-src stack', 'aria-labelledby': 'ps-h' },
+    h('h3', { id: 'ps-h' }, 'מאיפה הגיע החלבון', per !== 'day' ? h('span', { class: 'muted small' }, ' (ממוצע ליום)') : null),
+    m.tot > 0 ? h('div', { class: 'src-list' }, rows.map(r => h('div', { class: 'src-row' },
+      h('span', null, r.label),
+      h('div', { class: 'bar thin', 'aria-hidden': 'true' }, h('span', { style: `width:${r.share * 100}%;background:var(--protein)` })),
+      h('span', { class: 'num muted' }, `${fg(r.g / n)} ${GR} · ${Math.round(r.share * 100)}%`)))) : null,
+    h('h3', null, 'הצעות ייעול'),
+    insightList(out));
 }
 function insightList(items) {
   const icon = { good: '✓', warn: '!', bad: '!', info: 'i' };
