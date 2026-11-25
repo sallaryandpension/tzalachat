@@ -10,6 +10,7 @@
   --bg: #edf0f3; --surface: #ffffff; --ink: #151a20; --muted: #5a6470; --line: #d3d9e0;
   --accent: #1d4ccc; --on-accent: #ffffff; --soft: #e1e8fa;
   --red: #c42d26; --red-soft: #fbe5e3; --green: #1b7a45; --green-soft: #def3e6; --chip: #e6eaee;
+  --g1: #c8ecd5; --g2: #74c995; --g3: #1b7a45; --g-ink: #0d3a20; --g3-ink: #ffffff;
   --f-display: "Rubik", "Heebo", system-ui, "Segoe UI", Arial, sans-serif;
   --f-body: "Heebo", system-ui, "Segoe UI", Arial, sans-serif;
   --r: 14px;
@@ -18,11 +19,13 @@
   --bg: #0e1115; --surface: #171b21; --ink: #e7ebf0; --muted: #98a2ae; --line: #2a3139;
   --accent: #6e94ff; --on-accent: #0b1020; --soft: #1c2640;
   --red: #ff6f63; --red-soft: #3a1b19; --green: #50c482; --green-soft: #15301f; --chip: #222830;
+  --g1: #173b26; --g2: #23733f; --g3: #50c482; --g-ink: #d8f5e2; --g3-ink: #06200f;
   color-scheme: dark; } }
 :root[data-theme="dark"] {
   --bg: #0e1115; --surface: #171b21; --ink: #e7ebf0; --muted: #98a2ae; --line: #2a313a;
   --accent: #6e94ff; --on-accent: #0b1020; --soft: #1c2640;
   --red: #ff6f63; --red-soft: #3a1b19; --green: #50c482; --green-soft: #15301f; --chip: #222830;
+  --g1: #173b26; --g2: #23733f; --g3: #50c482; --g-ink: #d8f5e2; --g3-ink: #06200f;
   color-scheme: dark; }
 
 [hidden] { display: none !important; }
@@ -128,6 +131,43 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .pk-item.custom { color: var(--accent); font-weight: 700; }
 textarea.copy { width: 100%; box-sizing: border-box; min-height: 200px; font: inherit; border: 1px solid var(--line); border-radius: 10px; padding: 10px; background: var(--bg); color: var(--ink); }
 
+/* analysis */
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--r); padding: 14px; display: flex; flex-direction: column; gap: 10px; }
+.line { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.stats-btn { flex-direction: column; align-items: flex-start; gap: 2px; padding: 12px 18px; font-weight: 700; border-color: var(--green); }
+.cal-head { display: flex; align-items: center; justify-content: space-between; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; }
+.cal-wd { text-align: center; font-size: .75rem; color: var(--muted); padding-bottom: 2px; }
+.cal-day { min-height: 50px; border-radius: 9px; border: 1px solid var(--line); background: var(--bg); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; padding: 2px; font: inherit; color: var(--ink); min-width: 0; }
+.cal-n { font-family: var(--f-display); font-weight: 600; font-size: .95rem; font-variant-numeric: tabular-nums; }
+.cal-v { font-size: .62rem; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; max-width: 100%; }
+.cal-day.today { outline: 2px solid var(--accent); outline-offset: -2px; }
+.cal-day.on { border-color: transparent; cursor: pointer; }
+.cal-day.l1, .cal-legend .l1 { background: var(--g1); color: var(--g-ink); }
+.cal-day.l2, .cal-legend .l2 { background: var(--g2); color: var(--g-ink); }
+.cal-day.l3, .cal-legend .l3 { background: var(--g3); color: var(--g3-ink); }
+.cal-day.sel { box-shadow: 0 0 0 3px var(--ink); }
+.cal-legend { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.cal-legend i { display: inline-block; width: 14px; height: 14px; border-radius: 4px; }
+.day-w { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; }
+.mchips { display: flex; flex-wrap: wrap; gap: 6px; }
+.mchips span { background: var(--green-soft); color: var(--green); border-radius: 999px; padding: 3px 10px; font-size: .85rem; font-weight: 500; }
+.seg.period { grid-template-columns: repeat(4, auto); }
+.seg.period button { padding: 0 10px; font-size: .9rem; }
+.mgroup { gap: 14px; }
+.mrow { display: flex; flex-direction: column; gap: 5px; }
+.mtop { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.mbar { position: relative; height: 10px; border-radius: 6px; background: var(--chip); overflow: hidden; }
+.mbar .zone { position: absolute; inset-block: 0; inset-inline-start: 40%; width: 40%; background: color-mix(in srgb, var(--green) 18%, transparent); border-inline: 1px dashed color-mix(in srgb, var(--green) 60%, transparent); }
+.mbar .fill { position: absolute; inset-block: 2px; inset-inline-start: 0; border-radius: 4px; background: var(--muted); }
+.mrow.good .fill { background: var(--green); }
+.mrow.mid .fill { background: var(--accent); }
+.mrow.high .fill { background: var(--red); }
+.pill.good { background: var(--green-soft); color: var(--green); }
+.pill.mid { background: var(--soft); color: var(--accent); }
+.pill.high { background: var(--red-soft); color: var(--red); }
+.pill.low { background: var(--chip); color: var(--muted); }
+.pill.none { background: transparent; color: var(--muted); border: 1px dashed var(--line); }
 .acct { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
 .auth { display: flex; flex-direction: column; gap: 8px; }
 .auth label { font-weight: 500; margin-top: 4px; }
@@ -571,7 +611,7 @@ function render() {
   if (S.fatal) { app.replaceChildren(h('header', { class: 'hero' }, plates(), h('h1', null, 'יומן כושר')), h('p', { class: 'start-card', role: 'alert' }, S.fatal)); return; }
   if (!S.loaded) { app.replaceChildren(h('p', { class: 'muted' }, S.slow ? 'הטעינה לוקחת יותר זמן מהרגיל. היומן ייפתח כשהנתונים יגיעו.' : 'טוען את היומן…')); return; }
   if (S.needLogin) { app.replaceChildren(...renderLogin()); drawTimerBar(); return; }
-  const v =S.view === 'log' && S.current ? renderLog() : S.view === 'report' ? renderReport() : renderHome();
+  const v =S.view === 'log' && S.current ? renderLog() : S.view === 'report' ? renderReport() : S.view === 'stats' ? renderStats() : renderHome();
   app.replaceChildren(...v);
   drawTimerBar();
   S.fresh = null;
@@ -597,6 +637,9 @@ function renderHome() {
   }
   out.push(card);
   if (S.history.length) {
+    const days = new Set(S.history.filter(w => w.start >= Date.now() - 28 * DAY).map(w => dkey(w.start))).size;
+    out.push(h('button', { class: 'btn big stats-btn', type: 'button', onclick: () => go('stats') },
+      h('span', null, 'ניתוח אימונים'), h('span', { class: 'small muted' }, `לוח שנה ושרירים · ${days} ימי אימון ב-4 השבועות האחרונים`)));
     out.push(h('h2', { style: 'margin-top:8px' }, 'אימונים קודמים'));
     out.push(h('div', { class: 'history' }, S.history.map(w => {
       const st = stats(w), d = new Date(w.start);
@@ -751,6 +794,224 @@ function openPicker() {
       h('button', { class: 'btn icon', type: 'button', 'aria-label': 'סגור', onclick: closeModal }, icon('x'))), q), body), '#pk-q');
 }
 
+/* ---------- muscles: which muscles each exercise trains ---------- */
+// Primary muscles count a full set per set done, secondary muscles half a set.
+const MUSCLES = [
+  ['ch', 'חזה', 'up'], ['fd', 'כתף קדמית', 'up'], ['sd', 'כתף צידית', 'up'], ['rd', 'כתף אחורית', 'up'],
+  ['lat', 'גב רחב', 'up'], ['ub', 'גב עליון וטרפזים', 'up'], ['bi', 'יד קדמית (ביספס)', 'up'], ['tri', 'יד אחורית (טרייספס)', 'up'], ['fa', 'אמות ואחיזה', 'up'],
+  ['abs', 'בטן', 'core'], ['obl', 'אלכסונים', 'core'], ['lb', 'גב תחתון', 'core'],
+  ['q', 'ארבע ראשי', 'low'], ['h', 'ירך אחורית', 'low'], ['g', 'ישבן', 'low'], ['add', 'מקרבים (ירך פנימית)', 'low'], ['cv', 'שוקיים', 'low']
+];
+const MNAME = Object.fromEntries(MUSCLES.map(m => [m[0], m[1]]));
+const MGROUPS = [['up', 'פלג גוף עליון'], ['core', 'ליבה וגב תחתון'], ['low', 'פלג גוף תחתון']];
+const R = (re, p, s) => ({ re, p: p.split(' '), s: s ? s.split(' ') : [] });
+const MRULES = [
+  R(/rear delt|reverse fly|reverse pec|face pull|pull-apart|y-raise|cuban/i, 'rd', 'ub'),
+  R(/external rotation|internal rotation/i, 'rd'),
+  R(/lateral raise/i, 'sd'),
+  R(/front raise/i, 'fd', 'sd'),
+  R(/upright row/i, 'sd ub', 'bi'),
+  R(/shrug/i, 'ub', 'fa'),
+  R(/pullover/i, 'lat', 'ch tri'),
+  R(/wrist|plate pinch|gripper|dead hang|towel/i, 'fa', 'lat'),
+  R(/farmer|suitcase|sandbag carry/i, 'fa ub', 'abs obl'),
+  R(/muscle-up/i, 'lat tri', 'ch bi'),
+  R(/pull-up|chin-up|pulldown/i, 'lat', 'bi ub'),
+  R(/straight-arm/i, 'lat', 'tri'),
+  R(/sled pull/i, 'h g', 'ub fa'),
+  R(/row/i, 'ub lat', 'bi rd'),
+  R(/romanian|stiff-leg|good morning/i, 'h g', 'lb'),
+  R(/trap bar deadlift|sumo deadlift/i, 'q g h', 'lb add ub fa'),
+  R(/deadlift|rack pull/i, 'h g lb', 'ub q fa'),
+  R(/reverse hyper/i, 'g lb', 'h'),
+  R(/back extension|hyperextension|superman|hip extension/i, 'lb g', 'h'),
+  R(/leg curl|nordic|glute ham/i, 'h', 'cv'),
+  R(/adduction/i, 'add'),
+  R(/copenhagen/i, 'add obl', 'abs'),
+  R(/hip thrust|glute bridge|kickback|donkey kick|fire hydrant|abduction|clamshell|frog pump|lateral walk|pull-through/i, 'g', 'h'),
+  R(/calf|tibialis/i, 'cv'),
+  R(/leg extension|sissy/i, 'q'),
+  R(/leg press/i, 'q g', 'add'),
+  R(/clean|snatch|jerk/i, 'q g h ub', 'sd tri lb'),
+  R(/thruster|wall ball|devil press|man maker/i, 'q g fd', 'tri ub'),
+  R(/burpee/i, 'ch q', 'fd tri abs'),
+  R(/box jump|broad jump|jump squat/i, 'q g', 'cv'),
+  R(/squat|lunge|step-up|wall sit/i, 'q g', 'add h'),
+  R(/swing/i, 'g h', 'lb'),
+  R(/side plank|russian twist|woodchopper|oblique|side bend|pallof|landmine rotation|windshield|bicycle/i, 'obl abs'),
+  R(/plank|crunch|sit-up|leg raise|knee raise|dead bug|bird dog|hollow|v-up|ab wheel|l-sit|toes to bar|flutter|mountain climber|heel taps|stir the pot/i, 'abs', 'obl'),
+  R(/battle ropes/i, 'fd sd', 'abs'),
+  R(/sled push/i, 'q g', 'cv h'),
+  R(/tire flip/i, 'g h q', 'lb ub'),
+  R(/bear crawl/i, 'abs fd', 'q'),
+  R(/turkish/i, 'abs fd', 'g obl'),
+  R(/slam/i, 'abs lat', 'fd'),
+  R(/handstand|pike/i, 'fd', 'tri sd'),
+  R(/fly|crossover|pec deck|svend/i, 'ch', 'fd'),
+  R(/diamond/i, 'tri ch', 'fd'),
+  R(/chest dips|weighted dips/i, 'ch tri', 'fd'),
+  R(/push-up/i, 'ch', 'tri fd')
+];
+const MCAT = { 'חזה': R(null, 'ch', 'fd tri'), 'גב': R(null, 'ub lat', 'bi'), 'כתפיים': R(null, 'fd', 'sd tri'), 'אמות ואחיזה': R(null, 'fa'),
+  'רגליים – ארבע ראשי': R(null, 'q g', 'add'), 'ירך אחורית וישבן': R(null, 'h g', 'lb'), 'שוקיים': R(null, 'cv'), 'בטן וליבה': R(null, 'abs', 'obl'), 'כל הגוף ופונקציונלי': R(null, 'q g', 'abs') };
+// Exercises the user typed in themselves: guess from words in the name.
+const MGUESS = [
+  R(/ריצה|ריצת|run|אופני|bike|cycl|שחי|swim|הליכ|walk|cardio|אירובי|ספינינג|אליפטי/i, 'cardio'),
+  R(/מתיח|stretch|יוגה|yoga|mobility|ניידות/i, 'mobility'),
+  R(/ביספס|bicep|יד קדמית|curl|כפיפת מרפק/i, 'bi', 'fa'),
+  R(/טרייספס|tricep|יד אחורית|פשיטת מרפק/i, 'tri'),
+  R(/כתפ|shoulder|delt/i, 'fd sd', 'tri'),
+  R(/חזה|chest|bench|פרפר/i, 'ch', 'fd tri'),
+  R(/ירך אחורית|hamstring/i, 'h', 'g'),
+  R(/ישבן|glute|היפ|hip/i, 'g', 'h'),
+  R(/שוק|calf|עקב/i, 'cv'),
+  R(/בטן|abs|core|פלאנק|plank|ליבה/i, 'abs', 'obl'),
+  R(/גב|back|row|חתירה|מתח|pull|lat/i, 'lat ub', 'bi'),
+  R(/סקוואט|squat|רגל|leg|ארבע ראשי|לאנג|מכרע|lunge/i, 'q g', 'h')
+];
+function musclesFor(it) {
+  const ex = EXBY[it.key], cat = ex ? ex.cat : (it.cat || 'אחר');
+  if (cat === 'אירובי') return { kind: 'cardio', p: [], s: [] };
+  if (cat === 'גמישות וניידות') return { kind: 'mobility', p: [], s: [] };
+  const en = ex ? ex.en : '';
+  if (/jumping jacks|high knees/i.test(en)) return { kind: 'cardio', p: [], s: [] };
+  if (cat === 'יד קדמית') return /hammer|reverse|zottman/i.test(en) ? { p: ['bi', 'fa'], s: [] } : { p: ['bi'], s: ['fa'] };
+  if (cat === 'יד אחורית') return /close-grip bench/i.test(en) ? { p: ['tri', 'ch'], s: ['fd'] } : /dip/i.test(en) ? { p: ['tri'], s: ['ch', 'fd'] } : { p: ['tri'], s: [] };
+  if (ex) { for (const r of MRULES) if (r.re.test(en)) return r; return MCAT[cat] || { p: [], s: [] }; }
+  const name = (it.he || '') + ' ' + (it.en || '');
+  for (const r of MGUESS) if (r.re.test(name)) return r.p[0] === 'cardio' || r.p[0] === 'mobility' ? { kind: r.p[0], p: [], s: [] } : r;
+  return { kind: 'unknown', p: [], s: [] };
+}
+
+/* ---------- analysis: calendar + muscle report ---------- */
+const DAY = 864e5;
+const dkey = ts => { const d = new Date(ts); return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()); };
+const tons = v => v >= 1000 ? (v / 1000).toFixed(1) + ' טון' : Math.round(v) + ' ק״ג';
+const monthFmt = new Intl.DateTimeFormat('he-IL', { month: 'long', year: 'numeric' });
+const PERIODS = [['4w', '4 שבועות', 28], ['3m', '3 חודשים', 91], ['1y', 'שנה', 365], ['all', 'הכל', 0]];
+function byDay() {
+  const m = {};
+  for (const w of S.history) { const k = dkey(w.start), st = stats(w); const d = m[k] || (m[k] = { ws: [], vol: 0, sets: 0, ms: 0 }); d.ws.push(w); d.vol += st.vol; d.sets += st.sets; d.ms += w.end - w.start; }
+  return m;
+}
+function analyze(from) {
+  const ws = S.history.filter(w => w.start >= from), per = {};
+  for (const [id] of MUSCLES) per[id] = { sets: 0, vol: 0, days: new Set() };
+  let cardio = 0, mobility = 0, unknown = new Set(), vol = 0, sets = 0, ms = 0;
+  for (const w of ws) {
+    vol += stats(w).vol; sets += stats(w).sets; ms += w.end - w.start;
+    let hadCardio = false, hadMob = false;
+    for (const it of w.items) {
+      const m = musclesFor(it), n = it.sets.length, v = it.sets.reduce((a, s) => a + s.w * s.r, 0);
+      if (m.kind === 'cardio') { hadCardio = true; continue; }
+      if (m.kind === 'mobility') { hadMob = true; continue; }
+      if (m.kind === 'unknown') { unknown.add(it.he); continue; }
+      for (const id of m.p) { per[id].sets += n; per[id].vol += v; per[id].days.add(dkey(w.start)); }
+      for (const id of m.s) { per[id].sets += n / 2; per[id].vol += v / 2; }
+    }
+    if (hadCardio) cardio++; if (hadMob) mobility++;
+  }
+  return { ws, per, cardio, mobility, unknown: [...unknown], vol: Math.round(vol), sets, ms };
+}
+function lastHit(id) {
+  for (const w of S.history) for (const it of w.items) { const m = musclesFor(it); if (m.p.includes(id)) return w.start; }
+  return null;
+}
+function band(perWeek) {
+  if (perWeek <= 0) return { cls: 'none', text: 'לא אומן' };
+  if (perWeek < 4) return { cls: 'low', text: 'מעט' };
+  if (perWeek < 10) return { cls: 'mid', text: 'בינוני' };
+  if (perWeek <= 20) return { cls: 'good', text: 'טווח מומלץ' };
+  return { cls: 'high', text: 'גבוה מאוד' };
+}
+function musclesOfWorkout(w) {
+  const p = new Set();
+  for (const it of w.items) for (const id of musclesFor(it).p) p.add(id);
+  return MUSCLES.filter(m => p.has(m[0])).map(m => m[1]);
+}
+function renderStats() {
+  const out = [], days = byDay(), now = new Date();
+  if (!S.month) S.month = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const m0 = new Date(S.month), y = m0.getFullYear(), mo = m0.getMonth();
+  out.push(h('div', { class: 'topbar' }, h('button', { class: 'btn ghost', type: 'button', onclick: () => go('home') }, 'ראשי'),
+    h('div', { class: 'grow' }, h('div', { class: 'label' }, 'ניתוח אימונים'), h('div', { style: 'font-weight:700' }, `${S.history.length} אימונים ביומן`))));
+
+  /* calendar */
+  const inMonth = Object.entries(days).filter(([k]) => k.startsWith(y + '-' + pad(mo + 1) + '-'));
+  const mVol = inMonth.reduce((a, [, d]) => a + d.vol, 0), mMs = inMonth.reduce((a, [, d]) => a + d.ms, 0), mCount = inMonth.reduce((a, [, d]) => a + d.ws.length, 0);
+  const maxVol = Math.max(1, ...inMonth.map(([, d]) => d.vol));
+  if (!S.day || !S.day.startsWith(y + '-' + pad(mo + 1))) S.day = inMonth.length ? inMonth.map(([k]) => k).sort().pop() : null;
+  const shift = n => () => { S.month = new Date(y, mo + n, 1).getTime(); S.day = null; render(); };
+  const grid = h('div', { class: 'cal-grid', role: 'grid', 'aria-label': 'לוח אימונים ל' + monthFmt.format(m0) });
+  'אבגדהוש'.split('').forEach(c => grid.append(h('div', { class: 'cal-wd', 'aria-hidden': 'true' }, c + '׳')));
+  for (let i = 0; i < new Date(y, mo, 1).getDay(); i++) grid.append(h('div', { class: 'cal-pad' }));
+  const todayK = dkey(Date.now());
+  for (let d = 1; d <= new Date(y, mo + 1, 0).getDate(); d++) {
+    const k = y + '-' + pad(mo + 1) + '-' + pad(d), info = days[k];
+    if (!info) { grid.append(h('div', { class: 'cal-day' + (k === todayK ? ' today' : '') }, h('span', { class: 'cal-n' }, d))); continue; }
+    const lvl = Math.max(1, Math.ceil(3 * info.vol / maxVol));
+    grid.append(h('button', { type: 'button', class: `cal-day on l${lvl}` + (k === todayK ? ' today' : '') + (k === S.day ? ' sel' : ''), 'aria-pressed': String(k === S.day),
+      'aria-label': `${d} ב${monthFmt.format(m0)}: אימון, ${tons(info.vol)}`, onclick: () => { S.day = k; render(); } },
+      h('span', { class: 'cal-n' }, d), h('span', { class: 'cal-v' }, info.vol >= 1000 ? (info.vol / 1000).toFixed(1) + 'ט׳' : info.vol > 0 ? Math.round(info.vol) : info.sets + ' סט')));
+  }
+  const cal = h('section', { class: 'card' },
+    h('div', { class: 'cal-head' },
+      h('button', { class: 'btn icon', type: 'button', 'aria-label': 'החודש הקודם', onclick: shift(-1) }, h('span', { 'aria-hidden': 'true', style: 'font-size:1.4rem' }, '›')),
+      h('h2', null, monthFmt.format(m0)),
+      h('button', { class: 'btn icon', type: 'button', 'aria-label': 'החודש הבא', onclick: shift(1) }, h('span', { 'aria-hidden': 'true', style: 'font-size:1.4rem' }, '‹'))),
+    h('p', { class: 'muted small num', style: 'margin:0;text-align:center' }, mCount ? `${mCount} אימונים · הורמו ${tons(mVol)} · ${minutes(mMs)} בחדר כושר` : 'אין אימונים בחודש הזה'),
+    grid,
+    h('div', { class: 'cal-legend small muted' }, 'נפח האימון:', h('i', { class: 'l1' }), 'קל', h('i', { class: 'l2' }), 'בינוני', h('i', { class: 'l3' }), 'כבד', h('span', null, '· ט׳ = טון')));
+  out.push(cal);
+
+  /* selected day */
+  if (S.day && days[S.day]) {
+    const info = days[S.day];
+    out.push(h('section', { class: 'card' },
+      h('div', { class: 'line' }, h('h3', null, dayFmt.format(info.ws[0].start)), h('span', { class: 'pill up' }, tons(info.vol))),
+      info.ws.map(w => { const st = stats(w); return h('div', { class: 'day-w' },
+        h('div', { class: 'small muted num' }, h('span', { dir: 'ltr' }, `${timeFmt.format(w.start)}–${timeFmt.format(w.end)}`), ` · ${minutes(w.end - w.start)} · ${st.ex} תרגילים · ${st.sets} סטים · ${st.reps} חזרות`),
+        h('div', { class: 'mchips' }, musclesOfWorkout(w).map(n => h('span', null, n))),
+        h('div', { class: 'small' }, w.items.map(i => i.he).join(' · ')),
+        h('button', { class: 'btn', type: 'button', style: 'align-self:flex-start', onclick: () => { S.reportStart = w.start; go('report'); } }, 'לדו״ח המלא')); })));
+  }
+
+  /* period summary */
+  const P = PERIODS.find(p => p[0] === S.period) || PERIODS[0];
+  const oldest = S.history.length ? S.history[S.history.length - 1].start : Date.now();
+  const from = P[2] ? Date.now() - P[2] * DAY : oldest;
+  const weeks = Math.max(1, (P[2] || (Date.now() - oldest) / DAY + 1) / 7);
+  const A = analyze(from);
+  out.push(h('div', { class: 'line', style: 'margin-top:6px' }, h('h2', null, 'שרירים ותדירות'),
+    h('div', { class: 'seg period', role: 'group', 'aria-label': 'תקופה' }, PERIODS.map(p => h('button', { type: 'button', 'aria-pressed': String(p[0] === P[0]), onclick: () => { S.period = p[0]; render(); } }, p[1])))));
+  out.push(h('div', { class: 'stats' },
+    [[A.ws.length, 'אימונים'], [(A.ws.length / weeks).toFixed(1), 'אימונים בשבוע'], [A.vol >= 1000 ? (A.vol / 1000).toFixed(1) : A.vol, A.vol >= 1000 ? 'טון הורמו' : 'ק״ג הורמו'], [minutes(A.ms), 'בחדר כושר']]
+      .map(([v, l]) => h('div', { class: 'stat' }, h('b', null, v), h('span', { class: 'small muted' }, l)))));
+  if (!A.ws.length) out.push(h('p', { class: 'muted' }, 'אין אימונים בתקופה הזו.'));
+  else {
+    const SCALE = 25;
+    for (const [g, gname] of MGROUPS) {
+      const rows = MUSCLES.filter(m => m[2] === g).map(([id, name]) => {
+        const r = A.per[id], pw = r.sets / weeks, b = band(pw), lh = lastHit(id), freq = r.days.size / weeks;
+        return h('div', { class: 'mrow ' + b.cls },
+          h('div', { class: 'mtop' }, h('b', null, name), h('span', { class: 'pill ' + b.cls }, b.text)),
+          h('div', { class: 'mbar', 'aria-hidden': 'true' }, h('i', { class: 'zone' }), h('i', { class: 'fill', style: `width:${Math.min(100, pw / SCALE * 100)}%` })),
+          h('div', { class: 'small muted num' }, `${fmtN(Math.round(pw * 10) / 10)} סטים בשבוע · ${freq ? fmtN(Math.round(freq * 10) / 10) + ' פעמים בשבוע' : 'לא אומן בתקופה'}`
+            + (r.vol >= 1 ? ` · ${tons(r.vol)}` : '') + (lh ? ` · לאחרונה ${Math.floor((Date.now() - lh) / DAY) === 0 ? 'היום' : 'לפני ' + Math.floor((Date.now() - lh) / DAY) + ' ימים'}` : '')));
+      });
+      out.push(h('section', { class: 'card mgroup' }, h('h3', null, gname), rows));
+    }
+    const missed = MUSCLES.filter(([id]) => A.per[id].sets === 0).map(m => m[1]);
+    const notes = [];
+    if (missed.length) notes.push(h('p', { style: 'margin:0' }, h('b', null, 'לא אומנו בתקופה: '), missed.join(', ') + '.'));
+    if (A.cardio || A.mobility) notes.push(h('p', { style: 'margin:0' }, `אימוני אירובי: ${A.cardio} · אימוני גמישות: ${A.mobility}.`));
+    if (A.unknown.length) notes.push(h('p', { class: 'muted small', style: 'margin:0' }, `לא שויכו לשריר (תרגילים שהוספת בעצמך): ${A.unknown.join(', ')}.`));
+    if (notes.length) out.push(h('section', { class: 'card' }, notes));
+  }
+  out.push(h('p', { class: 'muted small', style: 'margin:0' }, 'איך זה מחושב: כל סט נספר כסט מלא לשרירים העיקריים של התרגיל, וכחצי סט לשרירים המסייעים. הפס מראה סטים בשבוע; האזור המסומן הוא 10–20 סטים בשבוע לשריר, הטווח שמומלץ בדרך כלל לבניית שריר. ״פעמים בשבוע״ סופר ימים שבהם השריר עבד כשריר עיקרי. נפח = משקל × חזרות.'));
+  return out;
+}
+
 /* ---------- report ---------- */
 function renderReport() {
   const w = S.history.find(x => x.start === S.reportStart);
@@ -761,6 +1022,8 @@ function renderReport() {
   out.push(h('p', { class: 'muted num', style: 'margin:0' }, h('span', { dir: 'ltr' }, `${timeFmt.format(w.start)}–${timeFmt.format(w.end)}`), ` · ${minutes(w.end - w.start)}`));
   out.push(h('div', { class: 'stats' },
     [[st.ex, 'תרגילים'], [st.sets, 'סטים'], [st.reps, 'חזרות'], [st.vol.toLocaleString('he-IL'), 'ק״ג נפח']].map(([v, l]) => h('div', { class: 'stat' }, h('b', null, v), h('span', { class: 'small muted' }, l)))));
+  const worked = musclesOfWorkout(w);
+  if (worked.length) out.push(h('div', null, h('div', { class: 'label', style: 'margin-bottom:6px' }, 'שרירים שעבדו'), h('div', { class: 'mchips' }, worked.map(n => h('span', null, n)))));
   for (const it of w.items) {
     const c = compare(it, w), vol = it.sets.reduce((a, s) => a + s.w * s.r, 0);
     out.push(h('section', { class: 'rep-ex' },
@@ -778,6 +1041,7 @@ function renderReport() {
   };
   out.push(h('div', { class: 'row-actions' },
     h('button', { class: 'btn primary', type: 'button', onclick: copy }, 'העתק דו״ח'),
+    h('button', { class: 'btn', type: 'button', onclick: () => { S.month = null; S.day = dkey(w.start); S.month = new Date(new Date(w.start).getFullYear(), new Date(w.start).getMonth(), 1).getTime(); go('stats'); } }, 'ניתוח כל האימונים'),
     h('button', { class: 'btn', type: 'button', onclick: () => go('home') }, 'חזרה לראשי'),
     h('button', { class: 'btn danger', type: 'button', onclick: () => dialog('למחוק את האימון?', [h('p', { style: 'margin:0' }, `האימון מ${dayFmt.format(w.start)} יימחק מהיומן לצמיתות.`)],
       [{ label: 'מחק', cls: 'danger', fn: () => { S.history = S.history.filter(x => x.start !== w.start); save('gym-w-' + w.start, null); closeModal(); go('home'); toast('האימון נמחק'); } }, { label: 'ביטול', fn: closeModal }]) }, 'מחק אימון')));
