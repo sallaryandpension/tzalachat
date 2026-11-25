@@ -1,5 +1,5 @@
 // Offline support for the installed gym log (scope ./gym/). build-site.ps1 stamps the version, so every rebuild replaces the cache.
-const VERSION = '20261125022509';
+const VERSION = '20261125022741';
 const CACHE = 'gym-' + VERSION;
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', '../firebase-config.js'];
 
@@ -22,9 +22,9 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin === self.location.origin) {
-    // The page: network first so updates arrive, the saved copy when offline.
+    // The page: network first (revalidated, so a new version shows at once), the saved copy when offline.
     if (req.mode === 'navigate') {
-      e.respondWith(fetch(req).then(res => put('./index.html', res)).catch(() => caches.match('./index.html')));
+      e.respondWith(fetch(req.url, { cache: 'no-cache', credentials: 'same-origin' }).then(res => put('./index.html', res)).catch(() => caches.match('./index.html')));
       return;
     }
     // Config and icons: saved copy first.
