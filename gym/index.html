@@ -485,6 +485,7 @@ const ICON = {
   plan: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="17" rx="2"/><path d="M8 2.5v3M16 2.5v3M8 11h8M8 15h5"/></svg>',
   chart: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16M7 16v-5M12 16V7M17 16v-8"/></svg>',
   plate: '<svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="16" cy="16" r="12.5"/><path d="M16 8.5a7.5 7.5 0 0 1 7.5 7.5H16z" fill="currentColor" stroke="none"/><circle cx="16" cy="16" r="7.5" stroke-width="1.6" opacity=".5"/></svg>',
+  swap: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4L3 8l4 4M3 8h13M17 20l4-4-4-4M21 16H8"/></svg>',
   lift: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M3 12h18M6 8v8M9 6v12M15 6v12M18 8v8"/></svg>'
 };
 const icon = name => h('span', { 'aria-hidden': 'true', style: 'display:inline-flex', html: ICON[name] });
@@ -938,6 +939,7 @@ function renderExercise(it, idx) {
       h('div', { class: 'grow' }, exTitle(it, 'h3')),
       h('button', { class: 'btn icon', type: 'button', 'aria-label': 'טיימר ל' + it.he, 'aria-expanded': String(S.timerOpen === it.uid), style: S.timerOpen === it.uid || (T && T.uid === it.uid) ? 'color:var(--accent)' : null,
         onclick: () => { S.timerOpen = S.timerOpen === it.uid ? null : it.uid; render(); } }, icon('timer')),
+      h('button', { class: 'btn icon', type: 'button', 'aria-label': `תרגיל חלופי ל${exName(it)}`, onclick: () => openSwap(it, ex => swapInLog(it, ex)) }, icon('swap')),
       h('button', { class: 'btn icon', type: 'button', 'aria-label': 'הסר את ' + it.he, onclick: removeEx }, icon('trash'))),
     last ? null : h('div', { class: 'prev' }, 'תרגיל חדש ביומן'),
     it.target ? h('div', { class: 'prev' }, 'יעד בתוכנית: ', h('span', null, it.target)) : null);
@@ -1602,6 +1604,73 @@ function equipPlan(eq) {
   const listTxt = eq.ids.length ? eq.ids.map(id => EQ_NAME[id] + (id === 'db' && dbs.length ? ` (${dbs.map(fmtN).join(', ')} ק״ג)` : id === 'kb' && kbs.length ? ` (${kbs.map(fmtN).join(', ')} ק״ג)` : '')).join(', ') : 'בלי ציוד';
   return { plan: { name: 'תוכנית לציוד שלי', from: 'equip', next: 0, days }, notes, listTxt };
 }
+/* ---------- alternative exercises ---------- */
+const SLOT_OF = {};
+for (const [slot, list] of Object.entries(SLOTS)) for (const c of list) (SLOT_OF[c[0]] || (SLOT_OF[c[0]] = [])).push({ slot, ways: c[1] });
+// Equipment an exercise needs: from the slot table when it is there, otherwise guessed from its English name.
+function needsOf(ex) {
+  const s = SLOT_OF[ex.key]; if (s) return s.flatMap(x => x.ways);
+  const n = ex.en || '';
+  if (/machine|smith|pec deck|leg press|leg extension|leg curl|hack|pendulum|belt squat|abduction|adduction|seated calf|t-bar|assisted|dip machine|calf raise machine/i.test(n)) return [['machine']];
+  if (/pallof|face pull/i.test(n)) return [['cable'], ['band']];
+  if (/cable|pulldown|pushdown|crossover|woodchopper|pull-through|rope/i.test(n)) return [['cable'], ['machine']];
+  if (/kettlebell|swing|turkish/i.test(n)) return [['kb']];
+  if (/dumbbell/i.test(n) && /incline|decline|fly|bench|pullover|close-grip|seated/i.test(n)) return [['db', 'bench']];
+  if (/dumbbell|hammer|concentration|lateral raise|front raise|rear delt|arnold|goblet|kickback|zottman|spider|farmer|suitcase|devil|man maker|seal row|meadows/i.test(n)) return [['db'], ['kb']];
+  if (/barbell|bench press|deadlift|squat|pendlay|yates|good morning|rack pull|clean|snatch|jerk|thruster|hip thrust|skull|ez-bar|jm press|floor press|landmine|overhead press|push press|behind-the-neck|z press|preacher|reverse curl|wrist|upright row|shrug|tate/i.test(n)) return [['bb']];
+  if (/pull-up|chin-up|hanging|toes to bar|muscle-up|dead hang|l-sit|towel/i.test(n)) return [['bar'], ['rings']];
+  if (/dips/i.test(n)) return [['dip'], ['rings']];
+  if (/ab wheel/i.test(n)) return [['wheel']];
+  if (/band/i.test(n)) return [['band']];
+  return [[]];
+}
+// Exercises that train the same main muscles, closest first. With saved equipment, the ones that fit it come first.
+function alternativesFor(it, limit = 8) {
+  const m = musclesFor(it); if (m.kind || !m.p.length) return [];
+  const eq = S.settings && S.settings.equip, has = eq ? new Set(eq.ids) : null;
+  const mySlots = new Set((SLOT_OF[it.key] || []).map(s => s.slot));
+  const all = new Set([...m.p, ...m.s]);
+  const out = [];
+  for (const ex of EX) {
+    if (ex.key === it.key) continue;
+    const c = musclesFor(ex); if (c.kind || !c.p.length) continue;
+    const sharedP = c.p.filter(id => m.p.includes(id)); if (!sharedP.length) continue;
+    const call = new Set([...c.p, ...c.s]), inter = [...call].filter(id => all.has(id)).length, union = new Set([...all, ...call]).size;
+    const slots = SLOT_OF[ex.key] || [], sameSlot = slots.some(s => mySlots.has(s.slot));
+    const fits = has ? needsOf(ex).some(w => w.every(id => has.has(id))) : null;
+    const score = 3 * sharedP.length / Math.max(m.p.length, c.p.length) + inter / union + (sameSlot ? 2 : 0) + (ex.cat === (EXBY[it.key] || it).cat ? .5 : 0) + (fits ? 1.5 : fits === false ? -2 : 0);
+    out.push({ ex, score, sharedP, fits });
+  }
+  return out.sort((a, b) => b.score - a.score).slice(0, limit);
+}
+function openSwap(it, onPick) {
+  const alts = alternativesFor(it), hasEq = !!(S.settings && S.settings.equip);
+  const body = h('div', { class: 'sh-body' });
+  if (!alts.length) body.append(h('p', { class: 'muted', style: 'margin:8px 4px' }, 'לא מצאנו תרגיל דומה ברשימה. אפשר לחפש בכל התרגילים.'));
+  for (const a of alts) {
+    body.append(h('button', { type: 'button', class: 'pk-item', onclick: () => onPick(a.ex) },
+      h('span', { class: 'pk-name' }, h('b', { class: 'he' }, h('bdi', null, exName(a.ex))), a.ex.en ? h('span', { class: 'he-sub' }, a.ex.he) : null,
+        h('span', { class: 'he-sub' }, 'אותם שרירים: ' + a.sharedP.map(id => MNAME[id]).join(', '))),
+      a.fits ? h('span', { class: 'pill good' }, 'מתאים לציוד שלך') : a.fits === false ? h('span', { class: 'pill none' }, 'דורש ציוד אחר') : null));
+  }
+  body.append(h('button', { type: 'button', class: 'pk-item custom', onclick: () => { closeModal(); openPicker(onPick, [it.key], 'נוכחי'); } }, 'חיפוש בכל התרגילים'));
+  openSheet(h('div', { class: 'sheet', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'תרגיל חלופי' },
+    h('div', { class: 'sh-head' }, h('div', { style: 'display:flex;align-items:center;justify-content:space-between;gap:8px' },
+      h('div', { class: 'ex-t' }, h('h2', null, 'תרגיל חלופי'), h('span', { class: 'he-sub' }, 'במקום ', h('bdi', null, exName(it)), hasEq ? ' · לפי השרירים והציוד שלך' : ' · לפי השרירים שהוא מאמן')),
+      h('button', { class: 'btn icon', type: 'button', 'aria-label': 'סגור', onclick: closeModal }, icon('x')))), body), '.pk-item');
+}
+// Swap inside the open workout: same number of sets, values from the last time the new exercise was done.
+function swapInLog(it, ex) {
+  const before = clone(it), n = it.sets.length, last = lastItem(ex.key, S.current.start);
+  Object.assign(it, { key: ex.key, he: ex.he, en: ex.en || '', cat: ex.cat, msg: null, note: null });
+  const reps = it.target ? (it.target.match(/של (.+?)(?: ·|$)/) || [])[1] : null;
+  if (S.current.prog && !musclesFor(it).kind) applySuggestion(it, reps ? { sets: n, reps } : (last ? null : { sets: n, reps: '8–12' }));
+  else it.sets = Array.from({ length: n }, (_, j) => { const s = last && (last.it.sets[j] || last.it.sets[last.it.sets.length - 1]); return s ? { w: fmtN(s.w), r: fmtN(s.r) } : { w: '', r: reps ? (reps.match(/\d+/) || [''])[0] : '' }; });
+  if (it.target) it.target = it.target.replace(/ · [\d.]+ ק״ג$/, '');
+  saveCurrent(); closeModal(); render();
+  toast(`${exName(before)} הוחלף ב-${exName(ex)}`, { label: 'בטל', fn: () => { Object.assign(it, before); saveCurrent(); render(); } });
+}
+
 function renderEquipTab() {
   const st = S.settings || (S.settings = { prog: false });
   const eq = S.eqDraft || (S.eqDraft = st.equip ? clone(st.equip) : { ids: [], db: '', kb: '', days: 3, text: '' });
@@ -1722,6 +1791,10 @@ function renderPlanEditor() {
       const move = dir => () => { const j = ii + dir; if (j < 0 || j >= d.items.length) return; [d.items[ii], d.items[j]] = [d.items[j], d.items[ii]]; savePlan(); render(); };
       card.append(h('div', { class: 'pl-ex' },
         h('div', { class: 'pl-exname' }, h('div', { class: 'grow ex-t' }, exTitle(it)),
+          h('button', { class: 'btn icon', type: 'button', 'aria-label': `תרגיל חלופי ל${exName(it)}`, onclick: () => openSwap(it, ex => {
+            d.items[ii] = { ...it, key: ex.key, he: ex.he, en: ex.en || '', cat: ex.cat }; delete d.items[ii].w;
+            savePlan(); closeModal(); render(); toast(`${exName(it)} הוחלף ב-${exName(ex)}`, { label: 'בטל', fn: () => { d.items[ii] = it; savePlan(); render(); } });
+          }) }, icon('swap')),
           h('button', { class: 'btn icon', type: 'button', 'aria-label': 'הזז למעלה', disabled: ii === 0 || null, onclick: move(-1) }, icon('up')),
           h('button', { class: 'btn icon', type: 'button', 'aria-label': 'הזז למטה', disabled: ii === d.items.length - 1 || null, onclick: move(1) }, icon('down')),
           h('button', { class: 'btn icon', type: 'button', 'aria-label': `הסר את ${it.he}`, onclick: () => { d.items.splice(ii, 1); savePlan(); render(); } }, icon('x'))),
