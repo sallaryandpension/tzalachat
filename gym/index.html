@@ -251,7 +251,8 @@ body.nav-on .topbar > .btn.ghost:first-child { display: none; }
 .stepper button:hover { background: var(--chip); }
 .stepper span { padding: 0 8px; font-weight: 600; white-space: nowrap; }
 .pl-reps { display: inline-flex; align-items: center; gap: 6px; }
-.pl-reps input { width: 70px; min-height: var(--tap); text-align: center; font: 600 1rem var(--f-display); border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface-2); color: var(--ink); }
+.pl-reps input { width: 7.5rem; min-height: var(--tap); text-align: center; font: 600 1rem var(--f-display); border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface-2); color: var(--ink); }
+.pl-w input { width: 4.2rem; }
 .start-opt { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; text-align: start; width: 100%; padding: 12px 14px; border: 1px solid var(--line-strong); border-radius: var(--r-sm); background: var(--surface); min-height: 56px; }
 .start-opt:hover { border-color: var(--accent); }
 .start-opt span { color: var(--muted); }
@@ -290,6 +291,14 @@ body.nav-on .topbar > .btn.ghost:first-child { display: none; }
 .ex-t { display: flex; flex-direction: column; min-width: 0; }
 .pk-name { display: flex; flex-direction: column; min-width: 0; }
 .pk-item .he { font-weight: 600; }
+.seg.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.seg.three button { padding: 0 4px; font-size: .9rem; line-height: 1.2; }
+.stack-16 { display: flex; flex-direction: column; gap: 16px; }
+.eq-text { width: 100%; box-sizing: border-box; font: inherit; font-size: 1rem; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface-2); color: var(--ink); resize: vertical; }
+.eq-text:focus, .eq-kg input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+.eq-kg { display: flex; flex-direction: column; gap: 6px; font-weight: 600; font-size: .9rem; }
+.eq-kg input { min-height: 46px; font: 600 1rem var(--f-display); padding: 0 12px; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface-2); color: var(--ink); }
+.eq-notes { margin: 0; padding-inline-start: 20px; display: flex; flex-direction: column; gap: 6px; }
 .pk-item.in-log .he::after { content: " · " attr(data-tag); color: var(--accent); font-size: .8rem; font-weight: 600; }
 .pk-item.custom { color: var(--accent); font-weight: 700; }
 textarea.copy { width: 100%; box-sizing: border-box; min-height: 200px; font: inherit; border: 1px solid var(--line-strong); border-radius: 12px; padding: 10px; background: var(--surface-2); color: var(--ink); }
@@ -516,7 +525,7 @@ function readDocs(docs) {
   for (const d of docs) {
     const data = d.data(); if (!data) continue;
     if (d.id === 'gym-plan') { if (Array.isArray(data.days)) S.plan = clone(data); }
-    else if (d.id === 'gym-settings') S.settings = { prog: !!data.prog };
+    else if (d.id === 'gym-settings') S.settings = { prog: !!data.prog, equip: data.equip || null };
     else if (d.id === 'gym-current') cur = data;
     else if (d.id.startsWith('gym-w-')) hist.push(data);
   }
@@ -575,7 +584,7 @@ function useLocal() {
   mode = 'local';
   try {
     const o = JSON.parse(localStorage.getItem(LS_KEY) || 'null');
-    if (o) { S.history = (o.history || []).filter(validWorkout).sort((a, b) => b.start - a.start); S.current = validWorkout(o.current) ? o.current : null; S.plan = o.plan && Array.isArray(o.plan.days) ? o.plan : null; S.settings = { prog: !!(o.settings && o.settings.prog) }; }
+    if (o) { S.history = (o.history || []).filter(validWorkout).sort((a, b) => b.start - a.start); S.current = validWorkout(o.current) ? o.current : null; S.plan = o.plan && Array.isArray(o.plan.days) ? o.plan : null; S.settings = { prog: !!(o.settings && o.settings.prog), equip: (o.settings && o.settings.equip) || null }; }
   } catch (e) { /* storage blocked: start empty */ }
   S.loaded = true; render();
 }
@@ -1348,7 +1357,7 @@ function applySuggestion(it, planItem) {
   const sg = suggest(it, planItem);
   it.sets = sg.sets.map(x => ({ w: x.tw > 0 ? fmtN(x.tw) : '', r: String(x.tr), tw: x.tw || 0, tr: x.tr, ot: x.tr, ow: x.tw || 0 }));
   it.note = sg.note; it.msg = null;
-  if (sg.newEx) it.sets.forEach(s => { s.w = ''; });
+  if (sg.newEx) it.sets.forEach(s => { s.w = planItem && planItem.w ? fmtN(planItem.w) : ''; if (planItem && planItem.w) { s.tw = s.ow = planItem.w; } });
 }
 // After a set is marked done: compare to its target and adjust the sets still to come.
 function onSetDone(it, j) {
@@ -1492,6 +1501,149 @@ function prefScore(t, f) {
   return { s, why };
 }
 
+/* ---------- plans from the equipment someone has ---------- */
+const EQUIP = [
+  ['db', 'משקולות יד'], ['kb', 'קטלבל'], ['bb', 'מוט ומשקולות'], ['rack', 'מתקן סקוואט (ראק)'], ['bench', 'ספסל'],
+  ['bar', 'מוט מתח'], ['dip', 'מקבילים'], ['rings', 'טבעות'], ['band', 'גומיות התנגדות'], ['wheel', 'גלגלת בטן'],
+  ['rope', 'חבל קפיצה'], ['cable', 'כבלים / פולי'], ['machine', 'מכונות של חדר כושר']
+];
+const EQ_NAME = Object.fromEntries(EQUIP);
+// Each candidate: [exercise key, ways to do it (each a list of equipment needed; [] = nothing), load: H heavy / M medium / L light / null bodyweight]
+const SLOTS = {
+  squat: [['Back Squat', [['bb', 'rack']], 'H'], ['Leg Press', [['machine']], 'H'], ['Front Squat', [['bb', 'rack']], 'H'], ['Goblet Squat', [['db'], ['kb']], 'H'],
+    ['Bulgarian Split Squat', [['db'], []], 'M'], ['Pistol Squat', [[]], null], ['Bodyweight Squat', [[]], null]],
+  hinge: [['Deadlift', [['bb']], 'H'], ['Romanian Deadlift', [['bb']], 'H'], ['Kettlebell Swing', [['kb']], 'H'], ['Dumbbell Romanian Deadlift', [['db']], 'H'],
+    ['Single-Leg Romanian Deadlift', [['db'], ['kb'], []], 'M'], ['Nordic Hamstring Curl', [[]], null], ['Single-Leg Glute Bridge', [[]], null], ['Glute Bridge', [[]], null]],
+  pushH: [['Bench Press', [['bb', 'bench', 'rack']], 'H'], ['Dumbbell Bench Press', [['db', 'bench']], 'M'], ['Floor Press', [['bb']], 'H'], ['Chest Dips', [['dip'], ['rings']], null],
+    ['Push-Up', [[]], null], ['Decline Push-Up', [[]], null]],
+  pushV: [['Overhead Press', [['bb']], 'M'], ['Seated Dumbbell Shoulder Press', [['db', 'bench']], 'M'], ['Standing Dumbbell Shoulder Press', [['db']], 'M'],
+    ['Arnold Press', [['db']], 'M'], ['Pike Push-Up', [[]], null]],
+  pullV: [['Pull-Up', [['bar'], ['rings']], null], ['Lat Pulldown', [['cable'], ['machine']], 'M'], ['Chin-Up', [['bar'], ['rings']], null]],
+  pullH: [['Barbell Row', [['bb']], 'H'], ['Seated Cable Row', [['cable'], ['machine']], 'M'], ['One-Arm Dumbbell Row', [['db'], ['kb']], 'M'], ['Inverted Row', [['bar'], ['rings'], []], null]],
+  biceps: [['Barbell Curl', [['bb']], 'L'], ['Dumbbell Curl', [['db']], 'L'], ['Hammer Curl', [['db']], 'L'], ['Cable Curl', [['cable']], 'L'], ['Chin-Up', [['bar'], ['rings']], null]],
+  triceps: [['Close-Grip Bench Press', [['bb', 'bench', 'rack']], 'M'], ['Overhead Triceps Extension', [['db']], 'L'], ['Triceps Pushdown', [['cable']], 'L'], ['Triceps Dips', [['dip'], ['rings']], null],
+    ['Triceps Kickback', [['db']], 'L'], ['Bench Dips', [[]], null], ['Diamond Push-Up', [[]], null]],
+  delts: [['Lateral Raise', [['db']], 'L'], ['Face Pull', [['cable'], ['band']], 'L'], ['Band Pull-Apart', [['band']], null], ['Rear Delt Fly', [['db']], 'L'], ['Pike Push-Up', [[]], null]],
+  glute: [['Hip Thrust', [['bb', 'bench']], 'H'], ['Banded Lateral Walk', [['band']], null], ['Single-Leg Glute Bridge', [[]], null], ['Glute Bridge', [[]], null]],
+  uni: [['Walking Lunge', [['db'], ['kb']], 'M'], ['Bulgarian Split Squat', [['db'], []], 'M'], ['Reverse Lunge', [[]], null], ['Step-Up', [[]], null]],
+  calf: [['Standing Calf Raise', [['db'], ['machine']], 'M'], ['Single-Leg Calf Raise', [[]], null]],
+  core: [['Hanging Leg Raise', [['bar'], ['rings']], null], ['Ab Wheel Rollout', [['wheel']], null], ['Pallof Press', [['band'], ['cable']], null], ['Plank', [[]], null], ['Dead Bug', [[]], null], ['Side Plank', [[]], null]]
+};
+const EQ_REPS = { 'Plank': '30–45 שנ׳', 'Side Plank': '20–40 שנ׳', 'Nordic Hamstring Curl': '3–6', 'Pull-Up': '4–10', 'Chin-Up': '4–10', 'Pistol Squat': '3–8 לכל רגל',
+  'Banded Lateral Walk': '12–15 לכל צד', 'Band Pull-Apart': '15–20', 'Dead Bug': '8–12 לכל צד', 'Ab Wheel Rollout': '6–12', 'Bodyweight Squat': '15–25' };
+const UNILATERAL = /bulgarian|single-leg|lunge|step-up|one-arm|pistol/i;
+const NEED = { H: 16, M: 6, L: 2 };   // kg per dumbbell (or kettlebell) for the exercise to work well
+function parseKg(s) { return String(s || '').split(/[^\d.]+/).map(Number).filter(n => n > 0 && n < 200).sort((a, b) => a - b); }
+// Free text such as "משקולות 5 ו-10 קילו, מוט מתח, גומייה" -> equipment ids and weights.
+function parseEquipText(text) {
+  const t = ' ' + String(text || '').toLowerCase() + ' ', ids = new Set();
+  const R = [['db', /משקולות|משקולת יד|דמבל|דאמבל|dumbbell/], ['kb', /קטלבל|kettlebell/], ['bb', /מוט אולימפי|מוט ישר|מוט ומשקולות|מוט עם משקולות|מוט עם צלחות|barbell|פלטות|צלחות/],
+    ['rack', /ראק|מתקן סקוואט|כלוב|rack/], ['bench', /ספסל|bench/], ['bar', /מוט מתח|מתח לדלת|pull.?up bar|מוט למתח/], ['dip', /מקבילים|dip/], ['rings', /טבעות|rings/],
+    ['band', /גומי|band/], ['wheel', /גלגלת|ab wheel/], ['rope', /חבל קפיצה|דילגית|jump rope/], ['cable', /פולי|כבל|cable/], ['machine', /מכונות|חדר כושר|gym/]];
+  for (const [id, re] of R) if (re.test(t)) ids.add(id);
+  if (/חדר כושר מלא|full gym/.test(t)) EQUIP.forEach(([id]) => ids.add(id));
+  const grab = re => { const m = t.match(re); return m ? parseKg(m[1]).join(', ') : ''; };
+  return { ids: [...ids], db: grab(/(?:משקולות|משקולת יד|דמבל|דאמבל|dumbbells?)([^,;\n]*)/), kb: grab(/(?:קטלבל|kettlebells?)([^,;\n]*)/) };
+}
+function equipPlan(eq) {
+  const has = new Set(eq.ids), dbs = parseKg(eq.db), kbs = parseKg(eq.kb);
+  if (has.has('db') && !dbs.length) dbs.push(...(has.has('machine') ? [5, 10, 15, 20] : [10]));   // no weights given: a gym rack, or one medium pair at home
+  if (has.has('kb') && !kbs.length) kbs.push(12);
+  const maxFree = Math.max(0, ...dbs, ...kbs);
+  const can = ways => ways.some(w => w.every(id => has.has(id)));
+  const viaHeavy = c => can(c[1].filter(w => w.some(id => ['bb', 'cable', 'machine'].includes(id))));   // barbell or machine: any load
+  const viaFree = c => can(c[1].filter(w => w.some(id => id === 'db' || id === 'kb')));               // limited to the dumbbells / kettlebells owned
+  // A loaded exercise that can only be done with dumbbells too light for it is "weak": used only when nothing better fits.
+  const weak = c => !!c[2] && !viaHeavy(c) && viaFree(c) && maxFree < NEED[c[2]];
+  const options = slot => {
+    const all = SLOTS[slot].filter(c => can(c[1]));
+    return all.filter(c => !weak(c)).concat(all.filter(weak));
+  };
+  const nearest = (list, target) => list.reduce((b, x) => Math.abs(x - target) < Math.abs(b - target) ? x : b, list[0]);
+  const used = new Set(), notes = [];
+  const pick = (slot, variant) => {
+    const opts = options(slot); if (!opts.length) return null;
+    const fresh = opts.filter(c => !used.has(c[0]));
+    const c = fresh[0] || opts[0]; used.add(c[0]);   // "used" already makes the second day pick the next option
+    const e = EXBY[c[0]], heavy = viaHeavy(c), free = !heavy && viaFree(c), loaded = !!c[2] && (heavy || free);
+    const pool = can(c[1].filter(w => w.includes('db'))) && dbs.length ? dbs : kbs;
+    let w = 0, reps = EQ_REPS[c[0]];
+    const isWeak = weak(c);
+    const lower = musclesFor({ key: c[0] }).p.some(id => ['q', 'h', 'g'].includes(id)), top = pool[pool.length - 1];
+    if (free && pool.length) w = c[2] === 'H' || (lower && c[2] === 'M') ? top
+      : c[2] === 'M' ? nearest(pool, top * .6) : nearest(pool, top * (/lateral|rear delt/i.test(c[0]) ? .2 : .35));
+    const lightLegs = free && lower && maxFree < NEED.H;
+    if (!reps) {
+      if (!loaded) reps = UNILATERAL.test(c[0]) ? '10–15 לכל רגל' : '8–15';
+      else if (isWeak || lightLegs) reps = '12–20' + (UNILATERAL.test(c[0]) ? ' לכל צד' : '');
+      else reps = c[2] === 'H' ? '6–10' : c[2] === 'M' ? '8–12' : '10–15';
+      if (loaded && UNILATERAL.test(c[0]) && !/לכל/.test(reps)) reps += ' לכל צד';
+    }
+    return { key: c[0], he: e.he, en: e.en, cat: e.cat, sets: 3, reps, ...(w ? { w } : {}) };
+  };
+  const day = (name, slots) => ({ name, items: slots.map(([s, v]) => pick(s, v || 0)).filter(Boolean) });
+  const n = eq.days || 3;
+  let days;
+  if (n >= 4) {
+    days = [day('עליון A', [['pushH'], [options('pullV').length ? 'pullV' : 'pullH'], ['pushV'], ['pullH'], ['triceps'], ['biceps']]),
+      day('תחתון A', [['squat'], ['hinge'], ['uni'], ['calf'], ['core']]),
+      day('עליון B', [['pushV', 1], [options('pullV').length ? 'pullV' : 'pullH', 1], ['pushH', 1], ['delts'], ['biceps', 1], ['triceps', 1]]),
+      day('תחתון B', [['hinge', 1], ['uni', 1], ['glute'], ['calf', 1], ['core', 1]])];
+  } else {
+    days = [day('אימון A', [['squat'], ['pushH'], [options('pullV').length ? 'pullV' : 'pullH'], ['hinge'], ['delts'], ['core']]),
+      day('אימון B', [['hinge', 1], ['pushV'], ['pullH'], ['uni'], ['biceps'], ['triceps'], ['core', 1]])];
+  }
+  // dedupe inside a day (a key picked twice when options run out)
+  for (const d of days) { const seen = new Set(); d.items = d.items.filter(i => !seen.has(i.key) && seen.add(i.key)); }
+  if (!options('pullV').length) notes.push('אין לך מוט מתח, ולכן אין בתוכנית משיכה אנכית לגב. מוט מתח לדלת או טבעות ישלימו אותה.');
+  if (!has.has('bb') && !has.has('machine') && maxFree && maxFree < NEED.H) notes.push(`המשקולות הכבדות שלך הן ${fmtN(maxFree)} ק״ג, קלות לרגליים ולגב. לכן התוכנית משתמשת בתרגילים על רגל אחת ובטווח של 12–20 חזרות.`);
+  if (!maxFree && !has.has('bb') && !has.has('machine') && !has.has('cable')) notes.push('התוכנית במשקל גוף. מתקדמים בהוספת חזרות, ואחר כך בגרסה קשה יותר של התרגיל (למשל משכיבות סמיכה רגילות לשכיבות סמיכה עם רגליים מוגבהות).');
+  if (!has.has('bench') && (has.has('db') || has.has('bb'))) notes.push('בלי ספסל אין לחיצת חזה עם משקולות, ולכן החזה עובד בשכיבות סמיכה או בלחיצה מהרצפה.');
+  const listTxt = eq.ids.length ? eq.ids.map(id => EQ_NAME[id] + (id === 'db' && dbs.length ? ` (${dbs.map(fmtN).join(', ')} ק״ג)` : id === 'kb' && kbs.length ? ` (${kbs.map(fmtN).join(', ')} ק״ג)` : '')).join(', ') : 'בלי ציוד';
+  return { plan: { name: 'תוכנית לציוד שלי', from: 'equip', next: 0, days }, notes, listTxt };
+}
+function renderEquipTab() {
+  const st = S.settings || (S.settings = { prog: false });
+  const eq = S.eqDraft || (S.eqDraft = st.equip ? clone(st.equip) : { ids: [], db: '', kb: '', days: 3, text: '' });
+  const out = [];
+  const txt = h('textarea', { id: 'eq-text', class: 'eq-text', rows: 3, placeholder: 'למשל: משקולות 5 ו-10 קילו, מוט מתח, גומייה וספסל', 'aria-label': 'מה הציוד שיש לך' });
+  txt.value = eq.text || '';
+  txt.addEventListener('input', () => { eq.text = txt.value; });
+  const detect = () => {
+    const r = parseEquipText(txt.value); eq.text = txt.value;
+    eq.ids = [...new Set([...eq.ids, ...r.ids])]; if (r.db) eq.db = r.db; if (r.kb) eq.kb = r.kb;
+    render(); toast(r.ids.length ? 'זוהה: ' + r.ids.map(id => EQ_NAME[id]).join(', ') : 'לא זיהיתי ציוד. אפשר לסמן ברשימה.');
+  };
+  const toggle = id => () => { eq.ids = eq.ids.includes(id) ? eq.ids.filter(x => x !== id) : eq.ids.concat(id); render(); requestAnimationFrame(() => { const b = document.getElementById('eq-' + id); if (b) b.focus(); }); };
+  const kgInput = (id, label) => h('label', { class: 'eq-kg', for: 'eq-' + id + '-kg' }, h('span', null, label),
+    h('input', { id: 'eq-' + id + '-kg', type: 'text', inputmode: 'decimal', dir: 'ltr', value: eq[id] || '', placeholder: id === 'db' ? '5, 10, 15' : '12, 16',
+      oninput: e => { eq[id] = e.target.value; } }));
+  out.push(h('section', { class: 'card' },
+    h('h2', null, 'איזה ציוד יש לך?'),
+    h('p', { class: 'muted small' }, 'כתוב בחופשיות או סמן ברשימה. נבנה תוכנית רק מתרגילים שאפשר לעשות עם הציוד הזה, ונתאים חזרות ומשקל למשקולות שיש לך.'),
+    txt, h('button', { class: 'btn', type: 'button', style: 'align-self:flex-start', onclick: detect }, 'זהה ציוד מהטקסט'),
+    h('div', { class: 'chips flat', role: 'group', 'aria-label': 'ציוד' },
+      h('button', { type: 'button', class: 'chip', onclick: () => { eq.ids = []; render(); } }, 'בלי ציוד'),
+      EQUIP.map(([id, name]) => h('button', { type: 'button', id: 'eq-' + id, class: 'chip', 'aria-pressed': String(eq.ids.includes(id)), onclick: toggle(id) }, name)),
+      h('button', { type: 'button', class: 'chip', onclick: () => { eq.ids = EQUIP.map(e => e[0]); render(); } }, 'חדר כושר מלא')),
+    eq.ids.includes('db') ? kgInput('db', 'משקלי המשקולות (ק״ג, לכל משקולת):') : null,
+    eq.ids.includes('kb') ? kgInput('kb', 'משקלי הקטלבלים (ק״ג):') : null,
+    h('div', { class: 'pf' }, h('div', { class: 'label' }, 'כמה ימים בשבוע?'),
+      h('div', { class: 'chips flat', role: 'group', 'aria-label': 'ימים בשבוע' }, [2, 3, 4].map(n => h('button', { type: 'button', class: 'chip', 'aria-pressed': String(eq.days === n), onclick: () => { eq.days = n; render(); } }, n + (n === 4 ? ' (עליון/תחתון)' : ''))))),
+    h('button', { class: 'btn primary', type: 'button', onclick: () => {
+      st.equip = clone(eq); saveSettings(); S.eqShown = true; render();
+      requestAnimationFrame(() => { const r = document.getElementById('eq-result'); if (r) r.scrollIntoView({ block: 'start', behavior: 'smooth' }); });
+    } }, 'בנה תוכנית לציוד שלי')));
+  if (S.eqShown) {
+    const g = equipPlan(eq);
+    const res = h('div', { id: 'eq-result', class: 'stack-16' });
+    res.append(planCard(g.plan, `הציוד: ${g.listTxt}. לכל תרגיל נבחר המשקל המתאים מהמשקולות שלך (אפשר לשנות אחרי הבחירה).`, 'מותאם לציוד שלך', `${g.plan.days.length} ימים בסבב · ${eq.days} אימונים בשבוע`, 'equip'));
+    if (g.notes.length) res.append(h('section', { class: 'card' }, h('h3', null, 'כדאי לדעת'), h('ul', { class: 'eq-notes' }, g.notes.map(n => h('li', null, n)))));
+    out.push(res);
+  }
+  return out;
+}
+
 /* plan screen: choose (by preference / like my workouts) or edit */
 function renderPlan() {
   const out = [];
@@ -1500,9 +1652,11 @@ function renderPlan() {
   if (S.plan && !S.planChoosing) return out.concat(renderPlanEditor());
   if (S.plan) out.push(h('button', { class: 'btn ghost', type: 'button', style: 'align-self:flex-start', onclick: () => { S.planChoosing = false; render(); } }, 'חזרה לתוכנית הנוכחית'));
   const tab = S.planTab || 'pref', hasHist = S.history.length >= 2;
-  out.push(h('div', { class: 'seg', role: 'group', 'aria-label': 'איך לבחור' },
-    h('button', { type: 'button', 'aria-pressed': String(tab === 'pref'), onclick: () => { S.planTab = 'pref'; render(); } }, 'לפי מה שאני רוצה'),
-    h('button', { type: 'button', 'aria-pressed': String(tab === 'like'), onclick: () => { S.planTab = 'like'; render(); } }, 'דומה למה שאני עושה')));
+  out.push(h('div', { class: 'seg three', role: 'group', 'aria-label': 'איך לבחור' },
+    h('button', { type: 'button', 'aria-pressed': String(tab === 'pref'), onclick: () => { S.planTab = 'pref'; render(); } }, 'לפי מטרה'),
+    h('button', { type: 'button', 'aria-pressed': String(tab === 'like'), onclick: () => { S.planTab = 'like'; render(); } }, 'כמו שאני מתאמן'),
+    h('button', { type: 'button', 'aria-pressed': String(tab === 'equip'), onclick: () => { S.planTab = 'equip'; render(); } }, 'לפי הציוד שלי')));
+  if (tab === 'equip') return out.concat(renderEquipTab());
   let list;
   if (tab === 'pref') {
     const f = S.pf || (S.pf = { days: 3, goal: 'muscle', level: 'beginner', place: 'gym' });
@@ -1540,7 +1694,7 @@ function planCard(plan, desc, badge, meta, id) {
     h('div', { class: 'line' }, h('h3', null, plan.name), badge ? h('span', { class: 'pill good' }, badge) : null),
     meta ? h('div', { class: 'small muted' }, meta) : null,
     h('p', { style: 'margin:0' }, desc),
-    open ? h('div', { class: 'tpl-days' }, plan.days.map(d => h('div', null, h('b', null, d.name), h('ul', null, d.items.map(i => h('li', null, h('bdi', { class: 'ex-en' }, exName(i)), h('span', { class: 'muted small num', dir: 'ltr' }, ` ${i.sets}×${i.reps}`))))))) : null,
+    open ? h('div', { class: 'tpl-days' }, plan.days.map(d => h('div', null, h('b', null, d.name), h('ul', null, d.items.map(i => h('li', null, h('bdi', { class: 'ex-en' }, exName(i)), h('span', { class: 'muted small num', dir: 'ltr' }, ` ${i.sets}×${i.reps}${i.w ? ' · ' + fmtN(i.w) + ' ק״ג' : ''}`))))))) : null,
     h('div', { class: 'row-actions' },
       h('button', { class: 'btn', type: 'button', 'aria-expanded': String(open), onclick: () => { S.planOpen = open ? null : key; render(); } }, open ? 'הסתר ימים' : `הצג ${plan.days.length} ימים`),
       h('button', { class: 'btn primary', type: 'button', onclick: () => choosePlan(plan) }, 'בחר את התוכנית')));
@@ -1577,7 +1731,10 @@ function renderPlanEditor() {
             h('span', { class: 'num' }, it.sets + ' סטים'),
             h('button', { type: 'button', 'aria-label': 'עוד סט', onclick: () => { it.sets = Math.min(10, it.sets + 1); savePlan(); render(); } }, '+')),
           h('label', { class: 'pl-reps' }, h('span', { class: 'small muted' }, 'חזרות'),
-            h('input', { id: `reps-${di}-${ii}`, type: 'text', value: it.reps, dir: 'ltr', 'aria-label': `חזרות ל${it.he}`, oninput: e => { it.reps = e.target.value; savePlan(); } })))));
+            h('input', { id: `reps-${di}-${ii}`, type: 'text', value: it.reps, 'aria-label': `חזרות ל${exName(it)}`, oninput: e => { it.reps = e.target.value; savePlan(); } })),
+          h('label', { class: 'pl-reps pl-w' }, h('span', { class: 'small muted' }, 'ק״ג'),
+            h('input', { id: `w-${di}-${ii}`, type: 'text', inputmode: 'decimal', dir: 'ltr', value: it.w ? fmtN(it.w) : '', placeholder: '—', 'aria-label': `משקל התחלתי ל${exName(it)}`,
+              oninput: e => { const v = num(e.target.value); if (v > 0) it.w = v; else delete it.w; savePlan(); } })))));
     });
     card.append(h('button', { class: 'btn add-ex', type: 'button', onclick: () => openPicker(ex => {
       d.items.push({ key: ex.key, he: ex.he, en: ex.en || '', cat: ex.cat, sets: 3, reps: '8–12' }); savePlan(); closeModal(); render();
@@ -1612,8 +1769,8 @@ function startFromPlan(i, prog) {
   const d = S.plan.days[i];
   S.current = { start: Date.now(), day: { idx: i, name: d.name }, items: d.items.map(pi => {
     const last = lastItem(pi.key), firstReps = (String(pi.reps).match(/\d+/) || [''])[0];
-    const sets = Array.from({ length: pi.sets }, (_, j) => { const s = last && (last.it.sets[j] || last.it.sets[last.it.sets.length - 1]); return s ? { w: fmtN(s.w), r: fmtN(s.r) } : { w: '', r: firstReps }; });
-    return { uid: uid(), key: pi.key, he: pi.he, en: pi.en, cat: pi.cat, tsec: last ? (last.it.tsec || 0) : 0, target: `${pi.sets} סטים של ${pi.reps}`, sets };
+    const sets = Array.from({ length: pi.sets }, (_, j) => { const s = last && (last.it.sets[j] || last.it.sets[last.it.sets.length - 1]); return s ? { w: fmtN(s.w), r: fmtN(s.r) } : { w: pi.w ? fmtN(pi.w) : '', r: firstReps }; });
+    return { uid: uid(), key: pi.key, he: pi.he, en: pi.en, cat: pi.cat, tsec: last ? (last.it.tsec || 0) : 0, target: `${pi.sets} סטים של ${pi.reps}` + (pi.w ? ` · ${fmtN(pi.w)} ק״ג` : ''), sets };
   }) };
   if (prog) { S.current.prog = true; S.current.items.forEach((it, k) => { if (!musclesFor(it).kind) applySuggestion(it, d.items[k]); }); }
   saveCurrent(true); go('log'); keepAwake();
