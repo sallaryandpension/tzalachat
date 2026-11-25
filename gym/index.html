@@ -130,9 +130,12 @@ body.nav-on .topbar > .btn.ghost:first-child { display: none; }
 .prev { font-size: .875rem; color: var(--muted); }
 .prev span { display: inline-block; }
 .sets { display: flex; flex-direction: column; gap: 6px; }
-.srow { display: grid; grid-template-columns: 1.8rem minmax(0, 1fr) minmax(0, 1fr) var(--tap); gap: 8px; align-items: center; }
-.srow.prog { grid-template-columns: 1.6rem minmax(0, 1fr) minmax(0, 1fr) var(--tap) 40px; gap: 6px; }
-.srow.prog .btn.icon:last-child { width: 40px; }
+.srow { display: grid; grid-template-columns: 1.5rem 4.2rem minmax(0, 1fr) minmax(0, 1fr) var(--tap); gap: 6px; align-items: center; }
+.srow.prog { grid-template-columns: 1.3rem 3.7rem minmax(0, 1fr) minmax(0, 1fr) var(--tap) 34px; gap: 5px; }
+.srow.prog .btn.icon:last-child { width: 34px; }
+.srow.prog input { font-size: 1.1rem; }
+.pv { min-height: 50px; display: flex; align-items: center; justify-content: center; border-radius: 12px; background: var(--chip); color: var(--muted); font-size: .85rem; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; padding: 0 2px; cursor: default; user-select: none; }
+.pv.empty-pv { background: transparent; }
 .srow.head { font-size: .78rem; color: var(--muted); font-weight: 600; }
 .srow .n { font-family: var(--f-display); font-weight: 700; color: var(--muted); text-align: center; }
 .srow input { width: 100%; box-sizing: border-box; min-height: 50px; font: 600 1.25rem var(--f-display); text-align: center; border: 1px solid var(--line-strong); border-radius: 12px; background: var(--surface-2); color: var(--ink); font-variant-numeric: tabular-nums; }
@@ -909,7 +912,7 @@ function renderExercise(it, idx) {
       h('button', { class: 'btn icon', type: 'button', 'aria-label': 'טיימר ל' + it.he, 'aria-expanded': String(S.timerOpen === it.uid), style: S.timerOpen === it.uid || (T && T.uid === it.uid) ? 'color:var(--accent)' : null,
         onclick: () => { S.timerOpen = S.timerOpen === it.uid ? null : it.uid; render(); } }, icon('timer')),
       h('button', { class: 'btn icon', type: 'button', 'aria-label': 'הסר את ' + it.he, onclick: removeEx }, icon('trash'))),
-    last ? h('div', { class: 'prev' }, 'פעם קודמת: ', last.it.sets.map((s, i) => [i ? ' · ' : '', (s.w > 0 ? h('span', { dir: 'ltr' }, `${fmtN(s.w)}×${fmtN(s.r)}`) : h('span', null, `${fmtN(s.r)} חז׳`))])) : h('div', { class: 'prev' }, 'תרגיל חדש ביומן'),
+    last ? null : h('div', { class: 'prev' }, 'תרגיל חדש ביומן'),
     it.target ? h('div', { class: 'prev' }, 'יעד בתוכנית: ', h('span', null, it.target)) : null);
   if (S.timerOpen === it.uid) {
     const opts = [30, 60, 90, 120, 180, 0];
@@ -918,7 +921,7 @@ function renderExercise(it, idx) {
         onclick: () => { it.tsec = s; saveCurrent(); S.timerOpen = null; startTimer(it, s); render(); } }, s ? secLabel(s) : 'סטופר'))));
   }
   const prog = !!S.current.prog, pc = prog ? ' prog' : '';
-  const sets = h('div', { class: 'sets' }, h('div', { class: 'srow head' + pc, 'aria-hidden': 'true' }, h('span', { style: 'text-align:center' }, 'סט'), h('span', { style: 'text-align:center' }, 'משקל (ק״ג)'), h('span', { style: 'text-align:center' }, isTimed(it) && prog ? 'שניות' : 'חזרות'), prog ? h('span', { style: 'text-align:center' }, 'בוצע') : null, h('span')));
+  const sets = h('div', { class: 'sets' }, h('div', { class: 'srow head' + pc, 'aria-hidden': 'true' }, h('span', { style: 'text-align:center' }, 'סט'), h('span', { style: 'text-align:center' }, 'קודם'), h('span', { style: 'text-align:center' }, 'ק״ג'), h('span', { style: 'text-align:center' }, isTimed(it) && prog ? 'שניות' : 'חזרות'), prog ? h('span', { style: 'text-align:center' }, 'בוצע') : null, h('span')));
   it.sets.forEach((s, j) => {
     const inp = (field, label) => h('input', { id: `${field}-${it.uid}-${j}`, type: 'text', inputmode: 'decimal', autocomplete: 'off', dir: 'ltr', value: s[field], 'aria-label': `${label}, סט ${j + 1}, ${it.he}` + (prog && s.tr ? `, יעד ${field === 'r' ? s.tr : fmtN(s.tw)}` : ''), placeholder: '0',
       oninput: e => { s[field] = e.target.value.replace(/[^\d.,]/g, ''); s.e = true; if (e.target.value !== s[field]) e.target.value = s[field]; saveCurrent(); },
@@ -926,7 +929,12 @@ function renderExercise(it, idx) {
     const done = prog ? h('button', { class: 'btn icon check' + (s.done ? ' on' : ''), type: 'button', 'aria-pressed': String(!!s.done), 'aria-label': `סט ${j + 1} בוצע`,
       onclick: () => { if (s.done) { s.done = false; it.msg = null; } else { if (!num(s.r)) { toast('כתוב כמה חזרות עשית, ואז סמן בוצע.'); return; } onSetDone(it, j); }
         saveCurrent(); render(); } }, icon('check')) : null;
-    sets.append(h('div', { class: 'srow' + pc + (s.done ? ' done' : '') }, h('span', { class: 'n num' }, j + 1), inp('w', 'משקל'), inp('r', 'חזרות'), done,
+    // Last time's same set: read-only, so it stays visible while the inputs change.
+    const ps = last && last.it.sets[j];
+    const pv = ps ? (ps.w > 0 ? h('span', { class: 'pv', dir: 'ltr', 'aria-label': `פעם קודמת: ${fmtN(ps.w)} ק״ג, ${fmtN(ps.r)} חזרות` }, `${fmtN(ps.w)}×${fmtN(ps.r)}`)
+      : h('span', { class: 'pv', 'aria-label': `פעם קודמת: ${fmtN(ps.r)} חזרות` }, `${fmtN(ps.r)} חז׳`))
+      : h('span', { class: 'pv empty-pv', 'aria-label': 'אין נתון מהפעם הקודמת' }, '—');
+    sets.append(h('div', { class: 'srow' + pc + (s.done ? ' done' : '') }, h('span', { class: 'n num' }, j + 1), pv, inp('w', 'משקל'), inp('r', 'חזרות'), done,
       it.sets.length > 1 ? h('button', { class: 'btn icon', type: 'button', 'aria-label': `מחק סט ${j + 1}`, onclick: () => { it.sets.splice(j, 1); saveCurrent(); render(); } }, icon('x')) : h('span')));
   });
   if (prog && it.note) card.append(h('div', { class: 'sugg' }, h('b', null, 'הצעה: '), it.note));
