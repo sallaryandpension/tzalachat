@@ -285,6 +285,11 @@ body.nav-on .topbar > .btn.ghost:first-child { display: none; }
 .pk-item { display: flex; justify-content: space-between; align-items: center; gap: 12px; text-align: start; width: 100%; padding: 11px 10px; min-height: 48px; border: 0; background: transparent; border-radius: 10px; color: var(--ink); }
 .pk-item:hover, .pk-item:focus-visible { background: var(--soft); }
 .pk-item .en { color: var(--muted); font-size: .85rem; direction: ltr; }
+.ex-en { font-weight: 700; }
+.he-sub { display: block; color: var(--muted); font-size: .85rem; font-weight: 400; line-height: 1.35; }
+.ex-t { display: flex; flex-direction: column; min-width: 0; }
+.pk-name { display: flex; flex-direction: column; min-width: 0; }
+.pk-item .he { font-weight: 600; }
 .pk-item.in-log .he::after { content: " · " attr(data-tag); color: var(--accent); font-size: .8rem; font-weight: 600; }
 .pk-item.custom { color: var(--accent); font-weight: 700; }
 textarea.copy { width: 100%; box-sizing: border-box; min-height: 200px; font: inherit; border: 1px solid var(--line-strong); border-radius: 12px; padding: 10px; background: var(--surface-2); color: var(--ink); }
@@ -678,7 +683,7 @@ const setText = s => (s.w > 0 ? `${fmtN(s.w)} ק״ג × ${fmtN(s.r)}` : `${fmtN(
 function reportText(w) {
   const st = stats(w), lines = [`אימון – ${dayFmt.format(w.start)}`, `${timeFmt.format(w.start)}–${timeFmt.format(w.end)} (${minutes(w.end - w.start)})`,
     `${st.ex} תרגילים · ${st.sets} סטים · ${st.reps} חזרות · נפח ${st.vol.toLocaleString('he-IL')} ק״ג`, ''];
-  for (const it of w.items) { lines.push(it.he + (it.en ? ` (${it.en})` : '')); it.sets.forEach((s, i) => lines.push(`  סט ${i + 1}: ${s.w > 0 ? fmtN(s.w) + ' ק״ג, ' : ''}${fmtN(s.r)} חזרות`)); }
+  for (const it of w.items) { lines.push(exName(it) + (it.en && it.he ? ` (${it.he})` : '')); it.sets.forEach((s, i) => lines.push(`  סט ${i + 1}: ${s.w > 0 ? fmtN(s.w) + ' ק״ג, ' : ''}${fmtN(s.r)} חזרות`)); }
   return lines.join('\n');
 }
 
@@ -692,7 +697,12 @@ function beep() {
     o.frequency.value = 880; g.gain.setValueAtTime(.0001, at); g.gain.exponentialRampToValueAtTime(.35, at + .02); g.gain.exponentialRampToValueAtTime(.0001, at + .28);
     o.connect(g).connect(AC.destination); o.start(at); o.stop(at + .3); });
 }
-function startTimer(item, secs) { audioOn(); T = { uid: item.uid, label: item.he, total: secs, acc: 0, base: Date.now(), running: true, done: false }; drawTimerBar(); }
+// Exercise names: English in bold, Hebrew small underneath (exercises typed in by the user have only a Hebrew name).
+const exName = it => it.en || it.he;
+function exTitle(it, tag = 'b') {
+  return [h(tag, { class: 'ex-en' }, h('bdi', null, exName(it))), it.en && it.he ? h('span', { class: 'he-sub' }, it.he) : null];
+}
+function startTimer(item, secs) { audioOn(); T = { uid: item.uid, label: exName(item), total: secs, acc: 0, base: Date.now(), running: true, done: false }; drawTimerBar(); }
 function stopTimer() { T = null; drawTimerBar(); }
 const tElapsed = () => T.acc + (T.running ? Date.now() - T.base : 0);
 function drawTimerBar() {
@@ -833,7 +843,7 @@ function renderHome() {
       const st = stats(w), d = new Date(w.start);
       return h('button', { class: 'hrow', type: 'button', onclick: () => { S.reportStart = w.start; go('report'); } },
         h('div', { class: 'date' }, h('span', { class: 'small muted' }, wdFmt.format(d)), h('b', { class: 'num' }, d.getDate()), h('span', { class: 'small' }, monFmt.format(d))),
-        h('div', { style: 'min-width:0' }, h('div', { class: 'names' }, w.items.map(i => i.he).join(' · ')),
+        h('div', { style: 'min-width:0' }, h('div', { class: 'names' }, h('bdi', null, w.items.map(exName).join(' · '))),
           h('div', { class: 'small muted num' }, `${st.ex} תרגילים · ${st.sets} סטים · ${minutes(w.end - w.start)}`)),
         h('div', { class: 'num small muted', style: 'text-align:center' }, h('b', { style: 'display:block;font-size:1rem;color:var(--ink)' }, st.vol.toLocaleString('he-IL')), 'ק״ג נפח'));
     })));
@@ -916,7 +926,7 @@ function renderExercise(it, idx) {
   };
   const card = h('section', { class: 'ex' + (S.fresh === it.uid ? ' fresh' : ''), id: 'ex-' + it.uid, 'aria-label': it.he },
     h('div', { class: 'ex-head' },
-      h('div', { class: 'grow' }, h('h3', null, it.he), it.en ? h('div', { class: 'en' }, it.en) : null),
+      h('div', { class: 'grow' }, exTitle(it, 'h3')),
       h('button', { class: 'btn icon', type: 'button', 'aria-label': 'טיימר ל' + it.he, 'aria-expanded': String(S.timerOpen === it.uid), style: S.timerOpen === it.uid || (T && T.uid === it.uid) ? 'color:var(--accent)' : null,
         onclick: () => { S.timerOpen = S.timerOpen === it.uid ? null : it.uid; render(); } }, icon('timer')),
       h('button', { class: 'btn icon', type: 'button', 'aria-label': 'הסר את ' + it.he, onclick: removeEx }, icon('trash'))),
@@ -983,7 +993,7 @@ function openPicker(pick = addExercise, inKeys = S.current ? S.current.items.map
   const q = h('input', { type: 'search', id: 'pk-q', placeholder: 'חיפוש בעברית או באנגלית, למשל מתח', autocomplete: 'off', 'aria-label': 'חיפוש תרגיל' });
   const body = h('div', { class: 'sh-body' });
   const item = ex => h('button', { type: 'button', class: 'pk-item' + (inLog.has(ex.key) ? ' in-log' : ''), onclick: () => pick(ex) },
-    h('span', { class: 'he', 'data-tag': tag }, ex.he), ex.en ? h('span', { class: 'en' }, ex.en) : null);
+    h('span', { class: 'pk-name' }, h('b', { class: 'he', 'data-tag': tag }, h('bdi', null, exName(ex))), ex.en && ex.he ? h('span', { class: 'he-sub' }, ex.he) : null));
   const draw = () => {
     const t = norm(q.value), kids = [];
     if (!t) {
@@ -1189,7 +1199,7 @@ function renderStats() {
       info.ws.map(w => { const st = stats(w); return h('div', { class: 'day-w' },
         h('div', { class: 'small muted num' }, h('span', { dir: 'ltr' }, `${timeFmt.format(w.start)}–${timeFmt.format(w.end)}`), ` · ${minutes(w.end - w.start)} · ${st.ex} תרגילים · ${st.sets} סטים · ${st.reps} חזרות`),
         h('div', { class: 'mchips' }, musclesOfWorkout(w).map(n => h('span', null, n))),
-        h('div', { class: 'small' }, w.items.map(i => i.he).join(' · ')),
+        h('div', { class: 'small' }, h('bdi', null, w.items.map(exName).join(' · '))),
         h('button', { class: 'btn', type: 'button', style: 'align-self:flex-start', onclick: () => { S.reportStart = w.start; go('report'); } }, 'לדו״ח המלא')); })));
   }
 
@@ -1235,7 +1245,7 @@ function renderStats() {
       const first = ss[ss.length - 1], last = ss[0], b0 = Math.max(...first.sets.map(e1rm)), b1 = Math.max(...last.sets.map(e1rm));
       const ch = b0 ? Math.round((b1 / b0 - 1) * 100) : 0, P = paceOf(k), bw = last.sets.every(s => !(s.w > 0));
       return h('div', { class: 'prog-row' },
-        h('div', { class: 'mtop' }, h('b', null, last.he), h('span', { class: 'pill ' + (P.a >= 1.3 ? 'good' : P.a >= .9 ? 'mid' : 'low') }, paceLabel(P.a))),
+        h('div', { class: 'mtop' }, h('div', { class: 'ex-t' }, exTitle(last)), h('span', { class: 'pill ' + (P.a >= 1.3 ? 'good' : P.a >= .9 ? 'mid' : 'low') }, paceLabel(P.a))),
         h('div', { class: 'small muted num' }, `${ss.length} אימונים · ` + (bw ? `שיא חזרות: ${b0} ← ${b1}` : `כוח משוער (1RM): ${Math.round(b0)} ← ${Math.round(b1)} ק״ג`) +
           ` · ${ch > 0 ? '+' : ''}${ch}%`));
     })));
@@ -1530,7 +1540,7 @@ function planCard(plan, desc, badge, meta, id) {
     h('div', { class: 'line' }, h('h3', null, plan.name), badge ? h('span', { class: 'pill good' }, badge) : null),
     meta ? h('div', { class: 'small muted' }, meta) : null,
     h('p', { style: 'margin:0' }, desc),
-    open ? h('div', { class: 'tpl-days' }, plan.days.map(d => h('div', null, h('b', null, d.name), h('ul', null, d.items.map(i => h('li', null, i.he, h('span', { class: 'muted small num', dir: 'ltr' }, ` ${i.sets}×${i.reps}`))))))) : null,
+    open ? h('div', { class: 'tpl-days' }, plan.days.map(d => h('div', null, h('b', null, d.name), h('ul', null, d.items.map(i => h('li', null, h('bdi', { class: 'ex-en' }, exName(i)), h('span', { class: 'muted small num', dir: 'ltr' }, ` ${i.sets}×${i.reps}`))))))) : null,
     h('div', { class: 'row-actions' },
       h('button', { class: 'btn', type: 'button', 'aria-expanded': String(open), onclick: () => { S.planOpen = open ? null : key; render(); } }, open ? 'הסתר ימים' : `הצג ${plan.days.length} ימים`),
       h('button', { class: 'btn primary', type: 'button', onclick: () => choosePlan(plan) }, 'בחר את התוכנית')));
@@ -1557,7 +1567,7 @@ function renderPlanEditor() {
     d.items.forEach((it, ii) => {
       const move = dir => () => { const j = ii + dir; if (j < 0 || j >= d.items.length) return; [d.items[ii], d.items[j]] = [d.items[j], d.items[ii]]; savePlan(); render(); };
       card.append(h('div', { class: 'pl-ex' },
-        h('div', { class: 'pl-exname' }, h('div', { class: 'grow' }, h('b', null, it.he), it.en ? h('span', { class: 'muted small', dir: 'ltr' }, ' ' + it.en) : null),
+        h('div', { class: 'pl-exname' }, h('div', { class: 'grow ex-t' }, exTitle(it)),
           h('button', { class: 'btn icon', type: 'button', 'aria-label': 'הזז למעלה', disabled: ii === 0 || null, onclick: move(-1) }, icon('up')),
           h('button', { class: 'btn icon', type: 'button', 'aria-label': 'הזז למטה', disabled: ii === d.items.length - 1 || null, onclick: move(1) }, icon('down')),
           h('button', { class: 'btn icon', type: 'button', 'aria-label': `הסר את ${it.he}`, onclick: () => { d.items.splice(ii, 1); savePlan(); render(); } }, icon('x'))),
@@ -1594,7 +1604,7 @@ function chooseStart() {
   openSheet(h('div', { class: 'sheet dialog', role: 'dialog', 'aria-modal': 'true', 'aria-label': 'איזה אימון היום?' },
     h('div', { class: 'sh-body' }, h('h2', null, 'איזה אימון היום?'), toggle,
       p ? [h('p', { class: 'muted small', style: 'margin:0' }, p.name),
-        p.days.map((d, i) => opt(d.name + (i === next ? ' · הבא בתור' : ''), d.items.map(x => x.he).join(' · ') || 'אין תרגילים עדיין', () => { closeModal(); startFromPlan(i, progOn()); }, i === next))] : null,
+        p.days.map((d, i) => opt(d.name + (i === next ? ' · הבא בתור' : ''), d.items.map(exName).join(' · ') || 'אין תרגילים עדיין', () => { closeModal(); startFromPlan(i, progOn()); }, i === next))] : null,
       opt('כמו באימון הקודם', S.history[0] ? 'התרגילים מהאימון של ' + dayFmt.format(S.history[0].start) : 'יומן ריק', () => { closeModal(); startFromLast(progOn()); }, !p),
       h('button', { class: 'btn ghost', type: 'button', onclick: closeModal }, 'ביטול'))), '.start-opt');
 }
@@ -1624,7 +1634,7 @@ function renderReport() {
   for (const it of w.items) {
     const c = compare(it, w), vol = it.sets.reduce((a, s) => a + s.w * s.r, 0);
     out.push(h('section', { class: 'rep-ex' },
-      h('div', { class: 'line' }, h('div', { style: 'min-width:0' }, h('h3', null, it.he), it.en ? h('div', { class: 'small muted', style: 'direction:ltr;text-align:right' }, it.en) : null),
+      h('div', { class: 'line' }, h('div', { class: 'ex-t', style: 'min-width:0' }, exTitle(it, 'h3')),
         h('div', { class: 'pills' }, it.sets.some(s => s.ot) ? (() => { const T = it.sets.filter(s => s.ot), hit = T.filter(s => s.r >= s.ot && s.w >= (s.ow || 0)).length;
           return h('span', { class: 'pill ' + (hit === T.length ? 'good' : hit ? 'mid' : 'down') }, `${hit}/${T.length} סטים ביעד`); })() : null,
           h('span', { class: 'pill ' + c.kind }, c.text))),
