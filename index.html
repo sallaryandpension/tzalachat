@@ -356,6 +356,20 @@ fieldset.field { border: 0; margin: 0; padding: 0; min-width: 0; }
 .seg button { border: 1px solid var(--line-strong); background: var(--surface); border-radius: 999px; padding: 8px 14px; min-height: 40px; font-size: var(--fs-s); font-weight: 500; }
 .seg button:hover { background: var(--surface-2); }
 .seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+/* Dish ingredients: leave out, halve or double each one */
+.parts { border: 1px solid var(--line-strong); border-radius: var(--r-s); padding: 0 14px; background: var(--surface); }
+.parts[open] { padding-bottom: 14px; }
+.parts > summary { cursor: pointer; min-height: 48px; padding-block: 10px; display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 10px; }
+.parts > summary::before { content: ""; width: 8px; height: 8px; border: solid var(--ink-2); border-width: 0 0 2px 2px; transform: rotate(45deg); margin-inline-end: 2px; align-self: center; transition: transform .15s ease; }
+.parts[open] > summary::before { transform: rotate(-45deg); }
+.parts > summary::-webkit-details-marker { display: none; }
+.parts > summary { list-style: none; }
+.parts-list { display: grid; gap: 14px; }
+.part { display: grid; gap: 6px; }
+.part-n { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.part .seg { flex-wrap: nowrap; }
+.part .seg button { flex: 1; padding-inline: 6px; }
+@media (min-width: 520px) { .part { grid-template-columns: minmax(0, 1fr) auto; align-items: center; } .part .seg button { flex: none; min-width: 58px; } }
 
 /* Macro pie (donut) */
 .donut-wrap { display: grid; grid-template-columns: minmax(150px, 220px) minmax(0, 1fr); gap: 20px; align-items: center; }
@@ -1043,7 +1057,7 @@ async function loadFoods() {
     state.common = arr.map((f, i) => {
       const spoon = isSpoonFood(f.n);
       return { key: 'c' + i, src: f.src === 'est' ? 'est' : 'common', name: f.n, serv: { label: f.s, g: f.g }, cat: f.cat, spoon,
-        v: f.v, units: spoon ? spoonUnits(f.n, f.u || []) : (f.u || []), code: f.code, q: norm(f.n + ' ' + (CAT[f.cat] || '')) };
+        v: f.v, units: spoon ? spoonUnits(f.n, f.u || []) : (f.u || []), code: f.code, parts: f.p || null, q: norm(f.n + ' ' + (CAT[f.cat] || '')) };
     });
     state.commonCodes = new Set(arr.filter(f => f.src === 'tz').map(f => f.code));
   } catch (e) { state.foodsError = true; }
@@ -1844,8 +1858,31 @@ function insightList(items) {
     h('span', null, ...it.html))));
 }
 function amountText(e) {
-  if (e.unit.kind === 'gram') return fg(e.g) + ' ' + GR;
-  return (e.qty === 1 ? '' : f1(e.qty) + ' × ') + e.unit.l;
+  const note = e.note ? ' · ' + e.note : '';
+  if (e.unit.kind === 'gram') return fg(e.g) + ' ' + GR + note;
+  return (e.qty === 1 ? '' : f1(e.qty) + ' × ') + e.unit.l + note;
+}
+/* Dishes built from ingredients (shawarma in pita, sabich…): each ingredient can be left out, halved or doubled. */
+const PART_STEPS = [[0, 'בלי'], [0.5, 'חצי'], [1, 'רגיל'], [2, 'כפול']];
+const isModded = mods => !!mods && mods.some(m => m !== 1);
+// The dish as changed: new values per 100 g and a new serving weight.
+function withMods(f, mods) {
+  if (!f.parts || !isModded(mods)) return f;
+  const sum = NUTR.map(() => 0), miss = NUTR.map(() => false); let tg = 0;
+  f.parts.forEach(([, g, v], i) => {
+    const pg = g * (mods[i] ?? 1); if (!pg) return;
+    tg += pg;
+    v.forEach((x, k) => { if (x == null) miss[k] = true; else sum[k] += x * pg / 100; });
+  });
+  const v = sum.map((x, k) => (miss[k] ? null : tg ? Math.round(x / tg * 1000) / 10 : 0));
+  return { ...f, v, serv: { label: `מנה מותאמת (${fg(tg)} ${GR})`, g: Math.round(tg * 10) / 10 } };
+}
+function modsNote(f, mods) {
+  if (!f.parts || !isModded(mods)) return '';
+  return f.parts.map(([label], i) => {
+    const m = mods[i] ?? 1;
+    return m === 0 ? 'בלי ' + label : m === 0.5 ? 'חצי ' + label : m === 2 ? 'כפול ' + label : '';
+  }).filter(Boolean).join(', ');
 }
 
 /* ---------- WEEK / MONTH ---------- */
@@ -2523,9 +2560,10 @@ function openEdit(entryId) {
   loadTz();
   const found = findFoodFor(e);
   const food = found ? { ...found } : { name: e.name, v: e.v, units: [], src: e.src, code: e.code };
-  Object.assign(sheet, { step: 'amount', meal: e.meal, date: state.date, food, entryId, editFoodId: null, query: '' });
-  const opts = unitOptions(food, e.unit);
-  sheet.unitIdx = Math.max(0, opts.findIndex(o => o.kind === e.unit.kind && o.l === e.unit.l));
+  const mods = food.parts ? (Array.isArray(e.mods) && e.mods.length === food.parts.length ? e.mods.slice() : food.parts.map(() => 1)) : null;
+  Object.assign(sheet, { step: 'amount', meal: e.meal, date: state.date, food, entryId, editFoodId: null, query: '', mods, partsOpen: isModded(mods) });
+  const opts = unitOptions(withMods(food, mods), food.parts ? null : e.unit);
+  sheet.unitIdx = Math.max(0, opts.findIndex(o => o.kind === e.unit.kind && (food.parts || o.l === e.unit.l)));
   sheet.qty = e.qty;
   renderSheet(); openSheet();
 }
@@ -2570,7 +2608,7 @@ function quickAdd(e) {
   setDay(sheet.date, entries); closeSheet(); render(); toast(e.name + ' נוסף');
 }
 function pickFood(f) {
-  sheet.food = f; sheet.step = 'amount';
+  sheet.food = f; sheet.step = 'amount'; sheet.mods = f.parts ? f.parts.map(() => 1) : null; sheet.partsOpen = false;
   const opts = unitOptions(f);
   sheet.unitIdx = defaultUnitIdx(opts, f.spoon);
   sheet.qty = opts[sheet.unitIdx].kind === 'gram' ? 100 : 1;
@@ -2596,7 +2634,8 @@ function defaultUnitIdx(opts, spoon) {
   return opts.length - 1;
 }
 function renderAmount(body, title) {
-  const f = sheet.food, opts = unitOptions(f, sheet.entryId ? (getDay(sheet.date).entries.find(x => x.id === sheet.entryId) || {}).unit : null);
+  const base = sheet.food, f = withMods(base, sheet.mods);
+  const opts = unitOptions(f, base.parts || !sheet.entryId ? null : (getDay(sheet.date).entries.find(x => x.id === sheet.entryId) || {}).unit);
   const editing = !!sheet.entryId;
   title.textContent = editing ? 'עריכה' : 'כמה אכלת?';
   const unit = () => opts[sheet.unitIdx] || opts[0];
@@ -2626,6 +2665,7 @@ function renderAmount(body, title) {
     const u = unit();
     const entry = { id: sheet.entryId || uid4(), meal: sheet.meal, name: f.name, unit: { l: u.l, g: u.g, kind: u.kind }, qty: Math.round(sheet.qty * 100) / 100,
       g: Math.round(grams() * 10) / 10, v: f.v, src: f.src, code: f.src === 'custom' ? f.id : (f.code || ''), t: Date.now() };
+    if (isModded(sheet.mods)) { entry.mods = sheet.mods.slice(); entry.note = modsNote(base, sheet.mods); }
     const day = getDay(sheet.date);
     const entries = editing ? day.entries.map(x => (x.id === entry.id ? entry : x)) : day.entries.concat([entry]);
     setDay(sheet.date, entries); closeSheet(); render(); toast(editing ? 'עודכן' : f.name + ' נוסף');
@@ -2633,6 +2673,7 @@ function renderAmount(body, title) {
   body.replaceChildren(
     h('div', null, h('h3', null, f.name), h('div', { class: 'row', style: 'gap:6px' }, h('span', { class: 'muted small' }, srcTxt),
       f.src === 'custom' && !editing && customIndex.some(x => x.id === f.id) ? h('button', { class: 'btn ghost small', type: 'button', onclick: () => openCustomEdit(f.id, true) }, 'עריכת המאכל') : null)),
+    base.parts ? partsPanel(base) : null,
     h('div', { class: 'field' }, h('label', { for: 'unit' }, 'יחידה'), unitSel),
     h('div', { class: 'field' }, h('label', { for: 'qty' }, 'כמות'),
       h('div', { class: 'qty' },
@@ -2647,6 +2688,27 @@ function renderAmount(body, title) {
       editing ? h('button', { class: 'btn danger', onclick: () => { const d = sheet.date, id = sheet.entryId; closeSheet(); removeEntry(d, id); } }, 'הסרה מהיומן')
         : h('button', { class: 'btn', onclick: () => { sheet.step = 'search'; renderSheet(); } }, 'חזרה')));
   upd();
+}
+function partsPanel(base) {
+  const mods = sheet.mods, note = modsNote(base, mods);
+  const setPart = (i, x) => {
+    if (x === 0 && mods.every((m, j) => j === i || m === 0)) { toast('צריך להשאיר לפחות רכיב אחד'); return; }
+    sheet.mods = mods.slice(); sheet.mods[i] = x; sheet.partsOpen = true;
+    const body = $('#sheet-body'), top = body.scrollTop;
+    renderSheet(); body.scrollTop = top;
+    const b = document.querySelector('[data-k="pt-' + i + '-' + x + '"]'); if (b) b.focus({ preventScroll: true });
+  };
+  const box = h('details', { class: 'parts', open: sheet.partsOpen || isModded(mods) },
+    h('summary', null, h('b', null, 'התאמת הרכיבים'), h('span', { class: 'muted small' }, note || 'למשל בלי טחינה, או חצי פיתה')),
+    h('div', { class: 'parts-list' }, base.parts.map(([label, g, v], i) => {
+      const m = mods[i] ?? 1;
+      return h('div', { class: 'part' },
+        h('div', { class: 'part-n' }, h('b', null, label), h('span', { class: 'muted small num' }, `${fg(g)} ${GR} · ${f0(v[0] * g / 100)} ${KC}`)),
+        h('div', { class: 'seg', role: 'group', 'aria-label': label }, PART_STEPS.map(([x, t]) =>
+          h('button', { type: 'button', 'data-k': 'pt-' + i + '-' + x, 'aria-pressed': String(m === x), onclick: () => setPart(i, x) }, t))));
+    })));
+  box.addEventListener('toggle', () => { sheet.partsOpen = box.open; });
+  return box;
 }
 function renderCustom(body, title) {
   const editing = sheet.editFoodId ? state.custom.find(x => x.id === sheet.editFoodId) : null;
