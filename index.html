@@ -12,7 +12,7 @@
   --accent: #6b2e5f; --accent-hover: #57234d; --accent-soft: #f4e9f1; --on-accent: #ffffff;
   --protein: #2a78d6; --carb: #eb6834; --fat: #1baf7a;
   --good: #0ca30c; --good-ink: #006300; --warn: #fab219; --warn-ink: #855400; --bad: #d03b3b; --bad-ink: #b42323;
-  --scrim: rgba(12, 20, 17, 0.45);
+  --scrim: rgba(12, 20, 17, 0.45); --on-series: #ffffff;
   --shadow: 0 1px 2px rgba(19, 32, 27, 0.06), 0 6px 20px rgba(19, 32, 27, 0.06);
   --f-display: "Secular One", "IBM Plex Sans Hebrew", system-ui, sans-serif;
   --f-body: "IBM Plex Sans Hebrew", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
@@ -228,6 +228,20 @@ td.n, th.n { text-align: end; font-variant-numeric: tabular-nums; }
 .seg { display: flex; flex-wrap: wrap; gap: 6px; }
 .seg button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px; font-size: 14px; }
 .seg button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+
+/* Macro pie (donut) */
+.donut-wrap { display: grid; grid-template-columns: minmax(150px, 220px) minmax(0, 1fr); gap: 18px; align-items: center; }
+@media (max-width: 520px) { .donut-wrap { grid-template-columns: 1fr; justify-items: center; } .donut-info { width: 100%; } }
+.donut { width: 100%; max-width: 220px; height: auto; display: block; }
+.donut .donut-big { font-family: var(--f-display); font-size: 30px; fill: var(--ink); }
+.donut .donut-small { font-family: var(--f-body); font-size: 12px; fill: var(--muted); }
+.donut .pct { fill: var(--on-series); font-family: var(--f-body); font-size: 12px; font-weight: 700; }
+.donut-info { display: grid; gap: 12px; min-width: 0; }
+.donut-info .big { font-family: var(--f-display); font-size: 30px; line-height: 1; }
+.dl { display: grid; gap: 10px; }
+.dl-row { display: grid; grid-template-columns: 12px 1fr auto; gap: 2px 8px; align-items: center; }
+.dl-row i { width: 12px; height: 12px; border-radius: 3px; }
+.dl-row .dl-sub { grid-column: 2 / -1; font-size: 12px; }
 
 /* Users */
 .user-btn { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 3px 10px 3px 4px; font-size: 13px; color: var(--ink-2); min-width: 0; max-width: 220px; }
@@ -971,7 +985,9 @@ function renderToday() {
       miniMeter('סיבים תזונתיים', t.fi, REC.fiber, GR, 'goal'),
       miniMeter('נתרן', t.na, REC.sodium, MG, 'cap'),
       miniMeter('שומן רווי', t.sf, p.kcalTarget * REC.satPct / 100 / 9, GR, 'cap'),
-      miniMeter('סוכרים', t.su, null, GR, 'info'))
+      miniMeter('סוכרים', t.su, null, GR, 'info')),
+    h('div', { class: 'row' }, h('button', { class: 'btn', type: 'button', onclick: openAnalysis }, pieIcon(), 'ניתוח'),
+      h('span', { class: 'muted small' }, 'עוגה של חלבון, פחמימות ושומן, עם הקלוריות לידה'))
   );
   out.push(summary);
 
@@ -1027,6 +1043,92 @@ function macroSplit(t) {
       h('span', null, h('i', { style: 'background:var(--protein)' }), `חלבון ${pct(pe)}% (${f0(t.p)} ${GR})`),
       h('span', null, h('i', { style: 'background:var(--carb)' }), `פחמימות ${pct(ce)}% (${f0(t.c)} ${GR})`),
       h('span', null, h('i', { style: 'background:var(--fat)' }), `שומן ${pct(fe)}% (${f0(t.f)} ${GR})`)));
+}
+/* Pie of protein / carbs / fat by share of calories, with total calories next to it. */
+const RANGES = { p: [10, 35], c: [45, 65], f: [20, 35] };   // accepted % of energy
+function arcPath(cx, cy, R, r, a0, a1) {
+  if (a1 - a0 >= 2 * Math.PI - 1e-6) { const m = a0 + Math.PI; return arcPath(cx, cy, R, r, a0, m) + ' ' + arcPath(cx, cy, R, r, m, a1); }
+  const large = a1 - a0 > Math.PI ? 1 : 0;
+  const pt = (rad, a) => (cx + rad * Math.cos(a)).toFixed(2) + ',' + (cy + rad * Math.sin(a)).toFixed(2);
+  return `M${pt(R, a0)} A${R},${R} 0 ${large} 1 ${pt(R, a1)} L${pt(r, a1)} A${r},${r} 0 ${large} 0 ${pt(r, a0)} Z`;
+}
+function pieIcon() {
+  return s('svg', { viewBox: '0 0 16 16', width: 16, height: 16, 'aria-hidden': 'true', style: 'vertical-align:-3px;margin-inline-end:6px' },
+    s('circle', { cx: 8, cy: 8, r: 6, fill: 'none', stroke: 'currentColor', 'stroke-width': 2.5, opacity: 0.35 }),
+    s('path', { d: 'M8 2 A6 6 0 0 1 13.2 11 L8 8 Z', fill: 'currentColor' }));
+}
+function macroDonutBlock(t, mode, partial) {
+  const p = state.profile;
+  const parts = [
+    { label: 'חלבון', g: t.p, k: t.p * 4, color: 'var(--protein)', r: RANGES.p },
+    { label: 'פחמימות', g: t.c, k: t.c * 4, color: 'var(--carb)', r: RANGES.c },
+    { label: 'שומן', g: t.f, k: t.f * 9, color: 'var(--fat)', r: RANGES.f }];
+  const sum = parts.reduce((x, y) => x + y.k, 0);
+  parts.forEach(x => { x.pct = sum ? x.k / sum * 100 : 0; });
+  const S = 220, cx = 110, cy = 110, R = 104, r = 66;
+  const svg = s('svg', { viewBox: `0 0 ${S} ${S}`, class: 'donut', role: 'img',
+    'aria-label': sum ? `חלוקת האנרגיה: ${parts.map(x => `${x.label} ${Math.round(x.pct)}%`).join(', ')}. סך הכול ${f0(t.k)} קלוריות.` : 'אין נתונים' });
+  if (!sum) svg.append(s('circle', { cx, cy, r: (R + r) / 2, fill: 'none', stroke: 'var(--surface-2)', 'stroke-width': R - r }));
+  let a = -Math.PI / 2;
+  for (const x of parts) {
+    if (x.k <= 0) continue;
+    const a1 = a + x.k / sum * 2 * Math.PI;
+    svg.append(s('path', { d: arcPath(cx, cy, R, r, a, a1), fill: x.color, stroke: 'var(--surface)', 'stroke-width': 2 },
+      s('title', null, `${x.label}: ${f0(x.g)} ${GR}, ${f0(x.k)} ${KC} (${Math.round(x.pct)}%)`)));
+    if (x.pct >= 7) {
+      const m = (a + a1) / 2, rm = (R + r) / 2;
+      svg.append(s('text', { x: (cx + rm * Math.cos(m)).toFixed(1), y: (cy + rm * Math.sin(m) + 4).toFixed(1), 'text-anchor': 'middle', class: 'pct' }, Math.round(x.pct) + '%'));
+    }
+    a = a1;
+  }
+  svg.append(s('text', { x: cx, y: cy + 6, 'text-anchor': 'middle', class: 'donut-big' }, f0(t.k)));
+  svg.append(s('text', { x: cx, y: cy + 27, 'text-anchor': 'middle', class: 'donut-small' }, mode === 'avg' ? KC + ' ליום' : KC));
+
+  const left = p.kcalTarget - t.k;
+  const info = h('div', { class: 'donut-info' },
+    h('div', null,
+      h('div', { class: 'muted small' }, mode === 'avg' ? 'קלוריות (ממוצע ליום)' : 'קלוריות'),
+      h('div', null, h('span', { class: 'big num' }, f0(t.k)), ' ', h('span', { class: 'muted num' }, '/ ' + f0(p.kcalTarget) + ' ' + KC)),
+      h('div', { class: 'small num', style: left < 0 ? 'color:var(--bad-ink)' : '' },
+        left < 0 ? `${f0(-left)} מעל היעד` : mode === 'avg' ? `${f0(left)} מתחת ליעד` : `נשארו ${f0(left)}`)),
+    h('div', { class: 'dl' }, parts.map(x => {
+      const st = !sum ? null : x.pct < x.r[0] ? ['info', 'נמוך'] : x.pct > x.r[1] ? ['warn', 'גבוה'] : ['good', 'בטווח'];
+      return h('div', { class: 'dl-row' }, h('i', { style: `background:${x.color}` }),
+        h('span', null, x.label + ' ', h('b', { class: 'num' }, `${f0(x.g)} ${GR}`)),
+        st ? h('span', { class: 'chip ' + st[0] }, st[1]) : h('span'),
+        h('span', { class: 'dl-sub muted num' }, `${f0(x.k)} ${KC} · ${Math.round(x.pct)}% מהאנרגיה · טווח מקובל ${x.r[0]}%–${x.r[1]}%`));
+    })),
+    h('div', { class: 'small' }, 'חלבון: ', h('b', { class: 'num' }, `${f0(t.p)} מתוך ${f0(p.proteinTarget)} ${GR}`),
+      t.p >= p.proteinTarget ? h('span', { class: 'chip good', style: 'margin-inline-start:6px' }, '✓ הושג') : null),
+    partial ? h('div', { class: 'muted small' }, 'היום עוד לא נגמר, אז החלוקה עוד יכולה להשתנות.') : null);
+  return h('div', { class: 'donut-wrap' }, svg, info);
+}
+function openAnalysis() {
+  Object.assign(sheet, { step: 'analysis', period: 'day', date: state.date, food: null, entryId: null, editFoodId: null });
+  renderSheet(); openSheet();
+}
+function renderAnalysis(body, title) {
+  title.textContent = 'ניתוח';
+  const per = sheet.period || 'day', tday = todayStr();
+  const seg = h('div', { class: 'seg', role: 'group', 'aria-label': 'תקופה' },
+    [['day', sheet.date === tday ? 'היום' : 'היום שנבחר'], ['week', 'השבוע'], ['month', 'החודש']].map(([k, l]) =>
+      h('button', { type: 'button', 'aria-pressed': String(per === k), onclick: () => { sheet.period = k; renderSheet(); } }, l)));
+  let t, sub, mode = 'day', partial = false, empty;
+  if (per === 'day') {
+    const day = getDay(sheet.date);
+    t = totals(day.entries); empty = !day.entries.length; partial = sheet.date === tday;
+    sub = sheet.date === tday ? 'היום, עד עכשיו' : dfLong.format(parseYmd(sheet.date));
+  } else {
+    const start = per === 'week' ? weekStart(tday) : tday.slice(0, 8) + '01';
+    const sd = parseYmd(start);
+    const end = per === 'week' ? addDays(start, 6) : ymd(new Date(sd.getFullYear(), sd.getMonth() + 1, 0));
+    const an = analyze(rangeDates(start, end), state.days);
+    t = an.avg; mode = 'avg'; empty = !an.n;
+    sub = `ממוצע ליום, לפי ${an.n === 1 ? 'יום אחד' : an.n + ' ימים'} שהסתיימו (בלי היום)`;
+  }
+  body.replaceChildren(seg, h('div', { class: 'muted small' }, sub),
+    empty ? h('p', { class: 'muted', style: 'margin:0' }, per === 'day' ? 'לא נרשם כלום ביום הזה.' : 'אין עדיין ימים שהסתיימו עם רישום בתקופה הזו.')
+      : macroDonutBlock(t, mode, partial));
 }
 function miniMeter(label, val, ref, unit, kind) {
   let chip = null, pct = 0, color = 'var(--muted)';
@@ -1198,8 +1300,7 @@ function renderPeriod(kind) {
     h('p', { class: 'muted small', style: 'margin:0' }, 'הקו המקווקו הוא היעד. ימים בלי רישום מסומנים בנקודה, והיום מופיע בצבע בהיר כי הוא עוד לא נגמר.')));
   out.push(h('section', { class: 'card stack' }, h('h3', null, 'חלבון ליום'),
     barChart(an.rows, r => r.t.p, p.proteinTarget, 'bar-p', GR, kind)));
-  out.push(h('section', { class: 'card stack' }, h('h3', null, 'ממה הגיעה האנרגיה (ממוצע)'), macroSplit(a),
-    h('p', { class: 'muted small', style: 'margin:0' }, 'טווחים מקובלים: חלבון 10%–35%, פחמימות 45%–65%, שומן 20%–35%.'),
+  out.push(h('section', { class: 'card stack' }, h('h3', null, 'ממה הגיעו הקלוריות (ממוצע ליום)'), macroDonutBlock(a, 'avg', false),
     h('div', { class: 'minis' },
       avgRow('סיבים', a.fi, GR, a.fi >= REC.fiber ? 'good' : a.fi < 18 ? 'warn' : 'info', 'המלצה: 25+'),
       avgRow('נתרן', a.na, MG, a.na > 2300 ? 'bad' : a.na > REC.sodium ? 'warn' : 'good', 'המלצה: עד 2,000'),
@@ -1523,6 +1624,7 @@ function renderSheet() {
       h('button', { class: 'btn ghost', onclick: () => { sheet.step = 'custom'; renderSheet(); } }, 'לא מצאת? הוספת מאכל משלך'));
     renderResults();
   } else if (sheet.step === 'amount') renderAmount(body, title);
+  else if (sheet.step === 'analysis') renderAnalysis(body, title);
   else renderCustom(body, title);
 }
 function renderResults() {
