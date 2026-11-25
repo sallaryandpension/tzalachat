@@ -157,7 +157,7 @@ document.documentElement.setAttribute('lang', 'he');
 const CATS = [
   ['חזה', 'Bench Press|לחיצת חזה;Incline Bench Press|לחיצת חזה בשיפוע חיובי;Decline Bench Press|לחיצת חזה בשיפוע שלילי;Dumbbell Bench Press|לחיצת חזה עם משקולות;Incline Dumbbell Press|לחיצת חזה בשיפוע עם משקולות;Dumbbell Fly|פרפר עם משקולות;Incline Dumbbell Fly|פרפר בשיפוע חיובי;Cable Crossover|קרוס-אובר בכבלים;Cable Fly (Low to High)|פרפר בכבלים מלמטה למעלה;Pec Deck / Machine Fly|פרפר במכונה (פק דק);Chest Press Machine|מכונת לחיצת חזה;Push-Up|שכיבת סמיכה;Incline Push-Up|שכיבת סמיכה בשיפוע;Decline Push-Up|שכיבת סמיכה עם רגליים מוגבהות;Diamond Push-Up|שכיבת סמיכה יהלום;Wide Push-Up|שכיבת סמיכה רחבה;Chest Dips|מקבילים (דגש חזה);Dumbbell Pullover|פולאובר עם משקולת;Svend Press|לחיצת סבנד'],
   ['גב', 'Pull-Up|מתח;Chin-Up|מתח באחיזה הפוכה;Neutral-Grip Pull-Up|מתח באחיזה ניטרלית;Wide-Grip Pull-Up|מתח באחיזה רחבה;Assisted Pull-Up|מתח בסיוע;Lat Pulldown|פולי עליון;Close-Grip Lat Pulldown|פולי עליון אחיזה צרה;Straight-Arm Pulldown|משיכת ידיים ישרות בפולי;Seated Cable Row|חתירה בישיבה (פולי תחתון);Barbell Row|חתירה בהטיה עם מוט;Pendlay Row|חתירת פנדליי;T-Bar Row|חתירת T;One-Arm Dumbbell Row|חתירה ביד אחת עם משקולת;Chest-Supported Row|חתירה עם תמיכת חזה;Machine Row|מכונת חתירה;Inverted Row|חתירה הפוכה (מתח אוסטרלי);Deadlift|דדליפט;Rack Pull|משיכה מהמתקן;Back Extension|פשיטת גב (היפראקסטנשן);Good Morning|גוד מורנינג;Superman|סופרמן;Face Pull|פייס פול;Shrugs|משיכת כתפיים (טרפזים)'],
-  ['כתפיים', 'Overhead Press|לחיצת כתפיים בעמידה;Seated Dumbbell Shoulder Press|לחיצת כתפיים בישיבה עם משקולות;Arnold Press|לחיצת ארנולד;Shoulder Press Machine|מכונת לחיצת כתפיים;Push Press|פוש פרס;Lateral Raise|הרחקת כתפיים לצדדים;Cable Lateral Raise|הרחקה לצד בכבל;Front Raise|הרמה קדמית;Rear Delt Fly|פרפר אחורי (כתף אחורית);Upright Row|חתירה אנכית;Pike Push-Up|שכיבת סמיכה בפייק;Handstand Push-Up|שכיבת סמיכה בעמידת ידיים;External Rotation|סיבוב חיצוני;Internal Rotation|סיבוב פנימי;Band Pull-Apart|פתיחת גומייה'],
+  ['כתפיים', 'Overhead Press|לחיצת כתפיים בעמידה עם מוט;Seated Dumbbell Shoulder Press|לחיצת כתפיים בישיבה עם משקולות;Arnold Press|לחיצת ארנולד;Shoulder Press Machine|מכונת לחיצת כתפיים;Push Press|פוש פרס;Lateral Raise|הרחקת כתפיים לצדדים;Cable Lateral Raise|הרחקה לצד בכבל;Front Raise|הרמה קדמית;Rear Delt Fly|פרפר אחורי (כתף אחורית);Upright Row|חתירה אנכית;Pike Push-Up|שכיבת סמיכה בפייק;Handstand Push-Up|שכיבת סמיכה בעמידת ידיים;External Rotation|סיבוב חיצוני;Internal Rotation|סיבוב פנימי;Band Pull-Apart|פתיחת גומייה'],
   ['יד קדמית', 'Barbell Curl|כפיפת מרפקים עם מוט;EZ-Bar Curl|כפיפת מרפקים במוט W;Dumbbell Curl|כפיפת מרפקים עם משקולות;Hammer Curl|כפיפת פטישים;Incline Dumbbell Curl|כפיפת מרפקים בשיפוע;Concentration Curl|כפיפת ריכוז;Preacher Curl|כפיפה בספסל סקוט;Cable Curl|כפיפת מרפקים בכבל;Spider Curl|כפיפת עכביש;Reverse Curl|כפיפה באחיזה הפוכה;Zottman Curl|כפיפת זוטמן'],
   ['יד אחורית', 'Triceps Pushdown|פשיטת מרפקים בפולי;Rope Pushdown|פשיטת מרפקים עם חבל;Overhead Triceps Extension|פשיטת מרפקים מעל הראש;Skull Crusher|מגהץ;Close-Grip Bench Press|לחיצת חזה באחיזה צרה;Triceps Dips|מקבילים (דגש יד אחורית);Bench Dips|שקיעות על ספסל;Triceps Kickback|פשיטת מרפק לאחור (קיקבק);JM Press|לחיצת JM'],
   ['אמות ואחיזה', 'Wrist Curl|כפיפת שורש כף היד;Reverse Wrist Curl|פשיטת שורש כף היד;Farmer\'s Walk|הליכת חקלאי;Dead Hang|תלייה סטטית על מתח;Plate Pinch|צביטת צלחות;Wrist Roller|גלגלת שורש כף היד'],
@@ -169,8 +169,106 @@ const CATS = [
   ['אירובי', 'Running|ריצה;Treadmill|הליכון;Walking|הליכה;Incline Walk|הליכה בשיפוע;Cycling|רכיבה על אופניים;Stationary Bike|אופני כושר;Spinning|ספינינג;Rowing Machine|מכונת חתירה (ארגומטר);Elliptical|אליפטיקל;Stair Climber|מדרגות (סטפר);Jump Rope|קפיצה בחבל;Swimming|שחייה;HIIT|אימון אינטרוולים;Sprints|ספרינטים'],
   ['גמישות וניידות', 'Hamstring Stretch|מתיחת ירך אחורית;Quad Stretch|מתיחת ארבע ראשי;Hip Flexor Stretch|מתיחת מכופפי ירך;Pigeon Pose|תנוחת היונה;Child\'s Pose|תנוחת הילד;Cat-Cow|חתול-פרה;Downward Dog|כלב מביט למטה;Cobra Stretch|מתיחת קוברה;World\'s Greatest Stretch|המתיחה הטובה בעולם;Thoracic Rotation|סיבוב גב עליון;Shoulder Dislocates|סיבובי כתפיים עם מקל;Foam Rolling|גלילה בפוֹם רולר;Calf Stretch|מתיחת שוקיים;Butterfly Stretch|מתיחת פרפר']
 ];
+// More exercises, added after the first list. Same format: English|Hebrew; the key stays the English name.
+const MORE = {
+  'חזה': 'Smith Machine Bench Press|לחיצת חזה במכונת סמית\';Incline Smith Machine Press|לחיצת חזה בשיפוע בסמית\';Machine Incline Chest Press|מכונת לחיצת חזה בשיפוע;Floor Press|לחיצה מהרצפה;Landmine Press|לחיצת לנדמיין;Close-Grip Dumbbell Press|לחיצת משקולות באחיזה צרה;Weighted Dips|מקבילים עם משקל;Weighted Push-Up|שכיבת סמיכה עם משקל',
+  'גב': 'Weighted Pull-Up|מתח עם משקל;Weighted Chin-Up|מתח הפוך עם משקל;Single-Arm Lat Pulldown|פולי עליון ביד אחת;Reverse-Grip Lat Pulldown|פולי עליון באחיזה הפוכה;Single-Arm Cable Row|חתירה בכבל ביד אחת;Meadows Row|חתירת מדואוז;Seal Row|חתירת כלב ים;Yates Row|חתירת ייטס;Cable Pullover|פולאובר בכבל;Machine Pullover|מכונת פולאובר;Trap Bar Deadlift|דדליפט במוט משושה;Deficit Deadlift|דדליפט מגובה;Snatch-Grip Deadlift|דדליפט באחיזת חטיפה;Dumbbell Shrugs|משיכת כתפיים עם משקולות;Machine Shrugs|משיכת כתפיים במכונה',
+  'כתפיים': 'Seated Barbell Shoulder Press|לחיצת כתפיים בישיבה עם מוט;Standing Dumbbell Shoulder Press|לחיצת כתפיים בעמידה עם משקולות;Smith Machine Shoulder Press|לחיצת כתפיים במכונת סמית\';Behind-the-Neck Press|לחיצה מאחורי הראש;Landmine Shoulder Press|לחיצת כתפיים בלנדמיין;Single-Arm Dumbbell Press|לחיצת כתפיים ביד אחת;Z Press|לחיצת Z (בישיבה על הרצפה);Machine Lateral Raise|מכונת הרחקת כתפיים;Seated Lateral Raise|הרחקה לצדדים בישיבה;Lean-Away Lateral Raise|הרחקה לצד בהטיה;Cable Front Raise|הרמה קדמית בכבל;Reverse Pec Deck|פרפר הפוך במכונה;Cable Rear Delt Fly|פרפר אחורי בכבל;Bent-Over Rear Delt Raise|הרחקה אחורית בהטיה;Y-Raise|הרמת Y;Cuban Press|לחיצה קובנית',
+  'יד קדמית': 'Alternating Dumbbell Curl|כפיפת מרפקים לסירוגין;Machine Bicep Curl|מכונת כפיפת מרפקים;Bayesian Cable Curl|כפיפת בייסיאן בכבל;Rope Hammer Curl|כפיפת פטישים עם חבל;Cross-Body Hammer Curl|כפיפת פטישים לרוחב הגוף;Drag Curl|כפיפת גרירה;High Cable Curl|כפיפה בכבל עליון;Chin-Up Hold|החזקה במתח הפוך',
+  'יד אחורית': 'Single-Arm Cable Pushdown|פשיטת מרפק ביד אחת בכבל;Overhead Cable Extension|פשיטת מרפקים מעל הראש בכבל;Single-Arm Overhead Extension|פשיטת מרפק מעל הראש ביד אחת;Dumbbell Skull Crusher|מגהץ עם משקולות;Dip Machine|מכונת מקבילים;Triceps Extension Machine|מכונת פשיטת מרפקים;Tate Press|לחיצת טייט',
+  'אמות ואחיזה': 'Behind-the-Back Wrist Curl|כפיפת שורש כף היד מאחורי הגב;Suitcase Carry|נשיאת מזוודה;Towel Pull-Up Hang|תלייה על מגבת;Gripper|מחזק אחיזה (קפיץ)',
+  'רגליים – ארבע ראשי': 'Belt Squat|סקוואט חגורה;Pendulum Squat|סקוואט מטוטלת;Zercher Squat|סקוואט זרכר;Overhead Squat|סקוואט מעל הראש;Pause Squat|סקוואט עם עצירה;Split Squat|סקוואט מפוצל;Cossack Squat|סקוואט קוזאקי;Single-Leg Leg Press|לחיצת רגליים ברגל אחת;Smith Machine Lunge|מכרע במכונת סמית\';Curtsy Lunge|מכרע קידה;Heel-Elevated Squat|סקוואט עם עקבים מוגבהים;Spanish Squat|סקוואט ספרדי',
+  'ירך אחורית וישבן': 'Dumbbell Romanian Deadlift|דדליפט רומני עם משקולות;Standing Leg Curl|כפיפת ברכיים בעמידה;Glute Ham Raise|הרמת ירך אחורית (GHR);Machine Hip Thrust|היפ תראסט במכונה;Smith Machine Hip Thrust|היפ תראסט בסמית\';Cable Pull-Through|משיכה בין הרגליים בכבל;Reverse Hyperextension|היפראקסטנשן הפוך;45° Hip Extension|פשיטת ירך ב-45 מעלות;Frog Pump|משאבת צפרדע;Kettlebell Deadlift|דדליפט קטלבל;Hip Abduction Cable|הרחקת ירך בכבל;Banded Lateral Walk|הליכה צידית עם גומייה',
+  'שוקיים': 'Donkey Calf Raise|הרמת עקבים חמור;Smith Machine Calf Raise|הרמת עקבים בסמית\';Calf Raise Machine (Seated Toe Press)|לחיצת אצבעות במכונה',
+  'בטן וליבה': 'Machine Crunch|מכונת כפיפות בטן;Decline Sit-Up|בטן בשיפוע שלילי;Captain\'s Chair Leg Raise|הרמת רגליים במתקן (כיסא הקפטן);Heel Taps|נגיעות בעקבים;Copenhagen Plank|פלאנק קופנהגן;Plank Shoulder Taps|פלאנק עם נגיעות בכתפיים;Landmine Rotation|סיבוב לנדמיין;Cable Oblique Crunch|כפיפות צד בכבל;Side Bend|כפיפות צד עם משקולת;Windshield Wipers|מגבים;Stir the Pot|ערבוב הסיר (על כדור)',
+  'כל הגוף ופונקציונלי': 'Hang Clean|הנפה מתלייה;Hang Power Snatch|חטיפת כוח מתלייה;Push Jerk|דחיקת ג\'רק;Devil Press|לחיצת השטן;Man Maker|מן מייקר;Sandbag Carry|נשיאת שק חול;Sled Pull|משיכת מזחלת;Broad Jump|קפיצה למרחק;Kettlebell Clean|הנפת קטלבל;Dumbbell Snatch|חטיפה עם משקולת',
+  'אירובי': 'Assault Bike|אופני אוויר (אסולט);SkiErg|סקי ארג;Rucking|הליכה עם תיק משקל;Boxing|אגרוף;Stair Running|ריצת מדרגות',
+  'גמישות וניידות': 'Couch Stretch|מתיחת ספה;Chest Stretch|מתיחת חזה;Lat Stretch|מתיחת גב רחב;Triceps Stretch|מתיחת יד אחורית;90/90 Hip Stretch|מתיחת 90/90;Ankle Mobility|ניידות קרסול;Deep Squat Hold|החזקת סקוואט עמוק'
+};
+// Other names people search for (English or Hebrew), comma separated, by key.
+const ALIASES = {
+  'Bench Press': 'Barbell Bench Press,Flat Bench Press,Chest Press Barbell,בנץ פרס,לחיצת חזה במוט,לחיצת חזה בשכיבה',
+  'Dumbbell Bench Press': 'Dumbbell Chest Press,DB Bench',
+  'Incline Bench Press': 'Incline Barbell Press',
+  'Pec Deck / Machine Fly': 'Butterfly,Chest Fly Machine,בטרפליי,פרפר',
+  'Dumbbell Fly': 'Chest Fly,Flyes',
+  'Push-Up': 'Pushup,Press-Up,שכיבות סמיכה',
+  'Chest Dips': 'Dips,מקבילים',
+  'Pull-Up': 'Pullup,Pull Up,מתח עליון',
+  'Chin-Up': 'Chinup,Chin Up,מתח הפוך',
+  'Lat Pulldown': 'Pulldown,Lat Pull Down,Wide Grip Pulldown,לט פולדאון,פולי',
+  'Seated Cable Row': 'Cable Row,Low Row,Seated Row,חתירה בכבל,פולי תחתון',
+  'Barbell Row': 'Bent Over Row,Bent-Over Barbell Row,חתירה במוט',
+  'One-Arm Dumbbell Row': 'Dumbbell Row,Single Arm Row,DB Row,חתירה עם משקולת',
+  'Machine Row': 'Row Machine,Seated Machine Row',
+  'Deadlift': 'Conventional Deadlift,Barbell Deadlift,הרמת מתים,דדליפט קלאסי',
+  'Back Extension': 'Hyperextension,Hyper Extension,היפראקסטנשן,פשיטת גב',
+  'Shrugs': 'Barbell Shrug,Trap Shrug,שראגס,טרפזים',
+  'Face Pull': 'Rope Face Pull,פייס פול',
+  'Overhead Press': 'Military Press,Barbell Shoulder Press,Shoulder Press Barbell,Standing Barbell Press,OHP,Barbell Overhead Press,לחיצה צבאית,לחיצת כתפיים עם מוט,לחיצת כתפיים במוט',
+  'Seated Barbell Shoulder Press': 'Shoulder Press Barbell Seated,Seated Military Press,Seated Overhead Press',
+  'Seated Dumbbell Shoulder Press': 'Dumbbell Shoulder Press,Shoulder Press Dumbbell,DB Shoulder Press,Dumbbell Overhead Press,לחיצת כתפיים עם משקולות',
+  'Shoulder Press Machine': 'Machine Shoulder Press,Shoulder Press,לחיצת כתפיים',
+  'Lateral Raise': 'Side Raise,Side Lateral Raise,Dumbbell Lateral Raise,Lateral Raises,הרחקה לצדדים,צדדיות',
+  'Front Raise': 'Dumbbell Front Raise,Plate Front Raise,הרמה קדימה',
+  'Rear Delt Fly': 'Reverse Fly,Rear Delt Raise,כתף אחורית',
+  'Barbell Curl': 'Bicep Curl Barbell,Barbell Bicep Curl,Biceps Curl Barbell,Standing Barbell Curl,ביספס עם מוט',
+  'EZ-Bar Curl': 'EZ Curl,EZ Bar Bicep Curl,ביספס במוט W',
+  'Dumbbell Curl': 'Bicep Curl,Biceps Curl,Dumbbell Bicep Curl,Dumbbell Biceps Curl,DB Curl,Standing Dumbbell Curl,כפיפת ביספס,ביספס,ביספס עם משקולות',
+  'Hammer Curl': 'Hammer Curls,Dumbbell Hammer Curl,פטישים',
+  'Preacher Curl': 'Scott Curl,Preacher Bicep Curl,ספסל סקוט',
+  'Cable Curl': 'Cable Bicep Curl,Biceps Cable Curl,ביספס בכבל',
+  'Concentration Curl': 'Seated Concentration Curl',
+  'Incline Dumbbell Curl': 'Incline Curl,Incline Bicep Curl',
+  'Triceps Pushdown': 'Tricep Pushdown,Cable Pushdown,Pushdown,Triceps Pressdown,Tricep Extension Cable,פושדאון,פשיטת מרפקים',
+  'Rope Pushdown': 'Tricep Rope Pushdown,Rope Triceps Extension',
+  'Overhead Triceps Extension': 'Overhead Tricep Extension,Dumbbell Overhead Extension,French Press Dumbbell,Seated Triceps Extension',
+  'Skull Crusher': 'Lying Triceps Extension,French Press,EZ Bar Skull Crusher,לחיצה צרפתית,צרפתית',
+  'Triceps Dips': 'Tricep Dips,Dips,Parallel Bar Dips,מקבילים',
+  'Triceps Kickback': 'Tricep Kickback,Kickbacks',
+  "Farmer's Walk": "Farmer's Carry,Farmers Walk,Farmers Carry",
+  'Back Squat': 'Squat,Barbell Squat,High Bar Squat,Low Bar Squat,סקוואט עם מוט,כפיפות ברכיים',
+  'Front Squat': 'Barbell Front Squat',
+  'Goblet Squat': 'Dumbbell Squat,Kettlebell Squat',
+  'Smith Machine Squat': 'Smith Squat',
+  'Leg Press': 'Leg Press Machine,45 Degree Leg Press,לג פרס',
+  'Leg Extension': 'Quad Extension,Leg Extensions,Knee Extension,פשיטת רגליים',
+  'Lunge': 'Lunges,Dumbbell Lunge,Barbell Lunge,Forward Lunge,לאנג\'ים,מכרעים',
+  'Bulgarian Split Squat': 'BSS,Rear Foot Elevated Split Squat,בולגרי',
+  'Step-Up': 'Step Up,Box Step Up,Dumbbell Step Up',
+  'Romanian Deadlift': 'RDL,Barbell RDL,רומני',
+  'Stiff-Leg Deadlift': 'SLDL,Stiff Leg Deadlift',
+  'Lying Leg Curl': 'Leg Curl,Hamstring Curl,Prone Leg Curl,כפיפת ברכיים,ירך אחורית',
+  'Seated Leg Curl': 'Seated Hamstring Curl',
+  'Nordic Hamstring Curl': 'Nordic Curl,Nordics,נורדי',
+  'Hip Thrust': 'Barbell Hip Thrust,Glute Thrust,היפ טראסט',
+  'Glute Bridge': 'Bridge,Hip Bridge,גשר',
+  'Cable Kickback': 'Glute Kickback,Cable Glute Kickback',
+  'Hip Abduction Machine': 'Abductor Machine,Hip Abduction,Outer Thigh Machine,אבדוקטור',
+  'Hip Adduction Machine': 'Adductor Machine,Hip Adduction,Inner Thigh Machine,אדוקטור',
+  'Kettlebell Swing': 'KB Swing,Russian Swing,סווינג',
+  'Standing Calf Raise': 'Calf Raise,Calf Raises,Calves,תאומים,הרמות עקבים',
+  'Crunch': 'Crunches,Abs,Ab Crunch,בטן,כפיפות בטן',
+  'Plank': 'Front Plank,Forearm Plank,גשר סטטי',
+  'Hanging Leg Raise': 'Leg Raise,Hanging Leg Raises',
+  'Cable Crunch': 'Kneeling Cable Crunch,Rope Crunch',
+  'Ab Wheel Rollout': 'Ab Roller,Ab Wheel,Rollout',
+  'Russian Twist': 'Russian Twists',
+  'Jump Rope': 'Skipping,Skipping Rope,דילגית',
+  'Running': 'Run,Jogging,ריצה קלה',
+  'Treadmill': 'Treadmill Run,Treadmill Walk',
+  'Rowing Machine': 'Rower,Row Erg,Concept2,חתירה',
+  'Stationary Bike': 'Exercise Bike,Bike,אופניים נייחים',
+  'Elliptical': 'Cross Trainer,אליפטי',
+  'Stair Climber': 'Stairmaster,Stepper,סטפר',
+  'Clean and Jerk': 'C&J',
+  'Burpee': 'Burpees,ברפיז'
+};
 const EX = [];
-for (const [cat, list] of CATS) for (const p of list.split(';')) { const [en, he] = p.split('|'); EX.push({ key: en, en, he, cat }); }
+for (const [cat, list] of CATS) {
+  const all = list + (MORE[cat] ? ';' + MORE[cat] : '');
+  for (const p of all.split(';')) { const [en, he] = p.split('|'); EX.push({ key: en, en, he, cat, al: ALIASES[en] || '' }); }
+}
 const EXBY = Object.fromEntries(EX.map(e => [e.key, e]));
 
 /* ---------- helpers ---------- */
@@ -633,7 +731,11 @@ function openPicker() {
       for (const [cat] of CATS) { kids.push(h('div', { class: 'pk-cat' }, cat)); EX.filter(e => e.cat === cat).forEach(e => kids.push(item(e))); }
     } else {
       const pool = [...EX, ...recent.filter(r => !EXBY[r.key])];
-      const hits = pool.filter(e => norm(e.he + ' ' + e.en).includes(t));
+      // Every word typed must appear (any order) in the Hebrew name, English name or one of the other names.
+      const words = t.split(' ');
+      const hay = e => e._hay || (e._hay = norm(e.he + ' ' + e.en + ' ' + (e.al || '').replace(/,/g, ' ')));
+      const score = e => (norm(e.he) === t || norm(e.en) === t) ? 0 : (norm(e.he).startsWith(t) || norm(e.en).startsWith(t)) ? 1 : 2;
+      const hits = pool.filter(e => { const s = hay(e); return words.every(w => s.includes(w)); }).sort((a, b) => score(a) - score(b));
       hits.slice(0, 60).forEach(e => kids.push(item(e)));
       const name = q.value.trim();
       if (!pool.some(e => norm(e.he) === t)) kids.push(h('button', { type: 'button', class: 'pk-item custom', onclick: () => addExercise({ key: 'custom:' + name, he: name, en: '', cat: 'אחר' }) }, `הוסף "${name}" כתרגיל חדש`));
