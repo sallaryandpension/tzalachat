@@ -1,6 +1,7 @@
 // Offline support for the installed app. build-site.ps1 stamps the version, so every rebuild replaces the cache.
-const VERSION = '20261125015224';
+const VERSION = '20261125020317';
 const CACHE = 'tzalachat-' + VERSION;
+const GYM_PATH = new URL('./gym/', self.location.href).pathname;
 const CORE = ['./', './index.html', './foods.json', './tzameret.json', './manifest.webmanifest',
   './icon-192.png', './icon-512.png', './icon-maskable-512.png'];
 
@@ -23,6 +24,8 @@ self.addEventListener('fetch', e => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin === self.location.origin) {
+    // The gym log in ./gym/ has its own service worker; leave its requests alone (never cache its page as this app's page).
+    if (url.pathname.startsWith(GYM_PATH)) return;
     // The page: network first so updates arrive, the saved copy when offline.
     if (req.mode === 'navigate') {
       e.respondWith(fetch(req).then(res => put('./index.html', res)).catch(() => caches.match('./index.html')));
