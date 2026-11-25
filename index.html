@@ -1,4 +1,4 @@
-<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#6b2e5f"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%236b2e5f' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='7.5' fill='none' stroke='%236b2e5f' stroke-width='2' opacity='.55'/%3E%3C/svg%3E"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
+<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#6b2e5f"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="apple-touch-icon.png"><link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%236b2e5f' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='7.5' fill='none' stroke='%236b2e5f' stroke-width='2' opacity='.55'/%3E%3C/svg%3E"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script><script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script><script src="firebase-config.js"></script></head><body>
 <title>צלחת</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -184,7 +184,7 @@ td.n, th.n { text-align: end; font-variant-numeric: tabular-nums; }
 .field { display: grid; gap: 6px; }
 .field > label, .field > .lbl { font-weight: 600; font-size: 14px; }
 .field .hint { font-size: 13px; color: var(--muted); }
-.field input[type="text"], .field input[type="number"], .field input[type="search"], .field select, .qty input {
+.field input[type="text"], .field input[type="number"], .field input[type="search"], .field input[type="email"], .field input[type="password"], .field select, .qty input {
   border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; background: var(--surface); width: 100%; min-width: 0;
 }
 .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
@@ -529,8 +529,14 @@ function migrateProfile() {
 
 /* ---------- storage: private db subtree in the artifact, or this browser ---------- */
 let DB = null, UID = null;
+let FS = null, AUTH = null, CLOUD_USER = null, unsubCloud = null, writeEpoch = 0;   // website build only (Firebase)
 const writes = {};
 async function initStore() {
+  if (window.TZ_CLOUD) {
+    if (window.firebase) return initCloud();
+    state.fatal = 'לא הצלחתי להתחבר לשרת. בדקו את החיבור לאינטרנט ורעננו את הדף.';
+    state.loaded = true; render(); return;
+  }
   const c = window.claude;
   if (!c || typeof c.use !== 'function') return useLocal();
   try {
@@ -538,7 +544,7 @@ async function initStore() {
     const id = u ? await u.id() : null;
     if (!d || !id) return useLocal();
     DB = d; UID = id; state.mode = 'db';
-    subscribe();
+    subscribe(DB.collection('data/users/' + UID));
   } catch (e) { useLocal(); }
 }
 function useLocal() {
@@ -560,9 +566,137 @@ function saveLocal() {
   try { localStorage.setItem(LS_KEY, JSON.stringify({ v: 2, all })); }
   catch (e) { toast('לא הצלחתי לשמור בדפדפן הזה'); }
 }
-function subscribe() {
+/* ---------- cloud accounts: the website build signs in with Firebase (email + password) ---------- */
+// Each account's documents: users/<uid>/docs/<same document names as above>.
+const cloudCol = () => FS.collection('users').doc(CLOUD_USER.uid).collection('docs');
+function resetData() {
+  writeEpoch++;
+  for (const k of Object.keys(writes)) delete writes[k];
+  Object.assign(state, { all: {}, pid: null, newUser: false, loaded: false, slow: false, readonly: false, dbError: null });
+  migrated.clear(); indexCustom();
+}
+function initCloud() {
+  try {
+    firebase.initializeApp(window.TZ_CLOUD);
+    AUTH = firebase.auth(); FS = firebase.firestore();
+    FS.enablePersistence({ synchronizeTabs: true }).catch(() => {});   // works offline in the installed app
+  } catch (e) {
+    state.fatal = 'החיבור לשרת נכשל. רעננו את הדף.'; state.loaded = true; render(); return;
+  }
+  state.mode = 'cloud';
+  AUTH.onAuthStateChanged(user => {
+    if (unsubCloud) { unsubCloud(); unsubCloud = null; }
+    resetData(); closeSheet();
+    CLOUD_USER = user;
+    if (!user) { state.needLogin = true; state.loaded = true; render(); return; }
+    state.needLogin = false; render();
+    unsubCloud = subscribe(cloudCol());
+  });
+}
+async function signOutCloud() {
+  closeSheet();
+  try { await AUTH.signOut(); } catch (e) { toast('ההתנתקות לא הצליחה. נסו שוב.'); }
+}
+function authError(e) {
+  const c = (e && e.code) || '';
+  return ({
+    'auth/invalid-email': 'המייל לא תקין.',
+    'auth/invalid-credential': 'המייל או הסיסמה לא נכונים.',
+    'auth/wrong-password': 'המייל או הסיסמה לא נכונים.',
+    'auth/user-not-found': 'המייל או הסיסמה לא נכונים.',
+    'auth/missing-password': 'צריך סיסמה.',
+    'auth/email-already-in-use': 'כבר יש חשבון עם המייל הזה. אפשר להיכנס, או ללחוץ על "שכחתי סיסמה".',
+    'auth/weak-password': 'הסיסמה קצרה מדי. צריך לפחות 6 תווים.',
+    'auth/too-many-requests': 'יותר מדי ניסיונות. נסו שוב בעוד כמה דקות.',
+    'auth/network-request-failed': 'אין חיבור לאינטרנט. התחברו ונסו שוב.',
+    'auth/operation-not-allowed': 'ההרשמה עדיין לא הופעלה באתר.'
+  })[c] || 'משהו השתבש. נסו שוב.';
+}
+/* A diary kept in this browser before accounts existed can move into the account. */
+const IMPORTED_KEY = 'tzalachat-imported';
+function localBackup() {
+  try {
+    const raw = localStorage.getItem(LS_KEY); if (!raw) return null;
+    const o = JSON.parse(raw);
+    const all = o.v === 2 ? (o.all || {}) : (o.profile ? { main: { profile: o.profile, days: o.days || {}, custom: o.custom || [] } } : {});
+    return Object.keys(all).some(k => all[k] && all[k].profile) ? all : null;
+  } catch (e) { return null; }
+}
+function importCard() {
+  if (state.mode !== 'cloud' || people().length) return null;
+  let done = false; try { done = localStorage.getItem(IMPORTED_KEY) === '1'; } catch (e) {}
+  const all = done ? null : localBackup();
+  if (!all) return null;
+  const n = Object.values(all).filter(b => b && b.profile).length;
+  return h('section', { class: 'card stack' }, h('h3', null, 'נמצא יומן בדפדפן הזה'),
+    h('p', { style: 'margin:0' }, `יש כאן יומן מלפני שנפתח החשבון (${n === 1 ? 'משתמש אחד' : n + ' משתמשים'}). אפשר להעביר אותו לחשבון, ואז הוא יופיע בכל מכשיר.`),
+    h('div', { class: 'row' },
+      h('button', { class: 'btn primary', type: 'button', onclick: () => importLocal(all) }, 'העברה לחשבון'),
+      h('button', { class: 'btn ghost', type: 'button', onclick: () => { try { localStorage.setItem(IMPORTED_KEY, '1'); } catch (e) {} render(); } }, 'לא צריך')));
+}
+function importLocal(all) {
+  for (const [pid, b] of Object.entries(all)) {
+    if (!b || !b.profile) continue;
+    state.all[pid] = { profile: b.profile, days: b.days || {}, custom: b.custom || [] };
+    const pre = pid === 'main' ? '' : 'p-' + pid + '-';
+    persist(pre + 'profile'); persist(pre + 'custom');
+    Object.keys(state.all[pid].days).forEach(d => persist(pre + 'day-' + d));
+  }
+  try { localStorage.setItem(IMPORTED_KEY, '1'); } catch (e) {}
+  state.newUser = false;
+  toast('היומן הועבר לחשבון');
+  const ids = people().map(p => p.id);
+  if (ids.length === 1) enterUser(ids[0]); else { state.pid = null; render(); }
+}
+function renderLogin() {
+  let mode = 'in', email0 = '';
+  const card = h('section', { class: 'card stack' });
+  const draw = msg => {
+    const err = h('div', { class: 'err', role: 'alert' }, (msg && msg.err) || '');
+    const email = h('input', { type: 'email', id: 'au-email', autocomplete: 'username', inputmode: 'email', dir: 'ltr', value: email0 });
+    const pass = h('input', { type: 'password', id: 'au-pass', autocomplete: mode === 'up' ? 'new-password' : 'current-password', dir: 'ltr' });
+    const pass2 = mode === 'up' ? h('input', { type: 'password', id: 'au-pass2', autocomplete: 'new-password', dir: 'ltr' }) : null;
+    const go = m => () => { mode = m; email0 = email.value.trim(); draw(); };
+    const form = h('form', { class: 'form', novalidate: true },
+      h('div', { class: 'seg', role: 'group', 'aria-label': 'כניסה או הרשמה' },
+        h('button', { type: 'button', 'aria-pressed': String(mode === 'in'), onclick: go('in') }, 'כניסה'),
+        h('button', { type: 'button', 'aria-pressed': String(mode === 'up'), onclick: go('up') }, 'הרשמה')),
+      h('div', { class: 'field' }, h('label', { for: 'au-email' }, 'מייל'), email),
+      h('div', { class: 'field' }, h('label', { for: 'au-pass' }, 'סיסמה'), mode === 'up' ? h('div', { class: 'hint' }, 'לפחות 6 תווים.') : null, pass),
+      pass2 ? h('div', { class: 'field' }, h('label', { for: 'au-pass2' }, 'הסיסמה שוב'), pass2) : null,
+      err,
+      msg && msg.ok ? h('div', { class: 'notice' }, msg.ok) : null,
+      h('button', { type: 'submit', class: 'btn primary big' }, mode === 'up' ? 'הרשמה' : 'כניסה'),
+      mode === 'in' ? h('button', { type: 'button', class: 'btn ghost', onclick: async () => {
+        email0 = email.value.trim();
+        if (!email0) { draw({ err: 'כתבו את המייל שלכם, ואז לחצו שוב על "שכחתי סיסמה".' }); return; }
+        try { await AUTH.sendPasswordResetEmail(email0); draw({ ok: 'אם יש חשבון עם המייל הזה, נשלח אליו קישור לבחירת סיסמה חדשה.' }); }
+        catch (e) { draw({ err: authError(e) }); }
+      } }, 'שכחתי סיסמה') : null);
+    form.addEventListener('submit', async e => {
+      e.preventDefault();
+      const em = email.value.trim(), pw = pass.value; email0 = em;
+      if (!em || !pw) { err.textContent = 'צריך מייל וסיסמה.'; return; }
+      if (mode === 'up' && pw !== pass2.value) { err.textContent = 'הסיסמאות לא זהות.'; return; }
+      const btn = form.querySelector('button[type=submit]'); btn.disabled = true; err.textContent = '';
+      try {
+        if (mode === 'up') await AUTH.createUserWithEmailAndPassword(em, pw);
+        else await AUTH.signInWithEmailAndPassword(em, pw);
+      } catch (ex) { err.textContent = authError(ex); btn.disabled = false; }
+    });
+    card.replaceChildren(
+      h('h2', null, mode === 'up' ? 'הרשמה לצלחת' : 'כניסה לצלחת'),
+      h('p', { style: 'margin:0' }, 'יומן תזונה אישי. עם חשבון, היומן נשמר בענן ומסתנכרן בין הטלפון למחשב.'),
+      form,
+      h('p', { class: 'muted small', style: 'margin:0' }, 'החשבונות והיומנים נשמרים בשירות Firebase של Google, בפרויקט של מי שמפעיל את האתר. למפעיל האתר יש גישה טכנית לנתונים.'));
+  };
+  draw();
+  return [card];
+}
+
+function subscribe(col) {
   const timer = setTimeout(() => { if (!state.loaded) { state.slow = true; render(); } }, 10000);
-  DB.collection('data/users/' + UID).onSnapshot(snap => {
+  return col.onSnapshot(snap => {
     if (!state.loaded && snap.metadata.fromCache && snap.empty) return;   // wait for the store before choosing a user
     const all = {};
     for (const d of snap.docs) {
@@ -596,7 +730,8 @@ function subscribe() {
 }
 function persist(docId) {
   if (state.mode === 'local') return saveLocal();
-  if (state.mode !== 'db' || state.readonly) return;
+  if ((state.mode !== 'db' && state.mode !== 'cloud') || state.readonly) return;
+  if (state.mode === 'cloud' && !CLOUD_USER) return;
   const w = writes[docId] || (writes[docId] = { busy: false, dirty: false, tries: 0 });
   w.dirty = true;
   if (!w.busy) flush(docId);
@@ -611,16 +746,17 @@ function bodyFor(docId) {
 }
 async function flush(docId) {
   const w = writes[docId]; w.busy = true;
-  while (w.dirty) {
+  const epoch = writeEpoch;   // a sign-out or account switch stops this loop
+  while (w.dirty && epoch === writeEpoch) {
     w.dirty = false;
     const body = bodyFor(docId);
-    const ref = DB.doc('data/users/' + UID + '/' + docId);
+    const ref = state.mode === 'cloud' ? cloudCol().doc(docId) : DB.doc('data/users/' + UID + '/' + docId);
     try {
       if (body) await ref.set(clone(body)); else await ref.delete();
       w.tries = 0;
     } catch (e) {
       const code = e && e.code;
-      if (code === 'invalid_argument') { state.readonly = true; toast('אין הרשאה לשמור כאן'); render(); }
+      if (code === 'invalid_argument' || code === 'permission-denied') { state.readonly = true; toast('אין הרשאה לשמור כאן'); render(); }
       else if (code === 'unavailable' && w.tries < 2) { w.tries++; w.dirty = true; await sleep(700 + Math.random() * 900); }
       else if (code === 'quota_exceeded') toast('אין מקום לשמור עוד נתונים');
       else toast('השמירה לא הצליחה. נסו שוב בעוד רגע.');
@@ -721,6 +857,11 @@ window.addEventListener('hashchange', route);
 function render() {
   const view = $('#view');
   const tabs = $('#tabs');
+  if (state.fatal || state.needLogin) {
+    tabs.hidden = true; $('#user-btn').hidden = true;
+    view.replaceChildren(...(state.fatal ? [h('section', { class: 'card stack' }, h('h2', null, 'אין חיבור'), h('p', { style: 'margin:0' }, state.fatal))] : renderLogin()));
+    return;
+  }
   if (!state.loaded) {
     view.replaceChildren(h('div', { class: 'loading' }, state.slow ? 'היומן לא נטען עדיין. בודק שוב ברקע…' : 'טוען את היומן…'));
     tabs.hidden = true; return;
@@ -767,7 +908,12 @@ function renderChooser() {
     installPrompt ? h('div', { class: 'row' }, installButton('התקנה כאפליקציה בטלפון'), h('span', { class: 'muted small' }, 'אייקון במסך הבית, חלון משלה, עובדת גם בלי אינטרנט.')) : null,
     h('p', { class: 'muted small', style: 'margin:0' }, state.mode === 'db'
       ? 'המשתמשים נשמרים בחשבון Claude שלך, ולכל אחד יש פרופיל, יעדים ויומן משלו. אין סיסמה: מי שפותח את האפליקציה בחשבון הזה יכול לעבור ביניהם. מי שיש לו חשבון Claude משלו יכול לקבל את הקישור ולהשתמש בה מהחשבון שלו.'
-      : 'המשתמשים נשמרים בדפדפן הזה, ולכל אחד יש פרופיל, יעדים ויומן משלו. אין סיסמה, וכל מי שמשתמש בדפדפן הזה יכול לעבור ביניהם.'))];
+      : state.mode === 'cloud'
+        ? 'אלה המשתמשים בחשבון הזה, ולכל אחד יש פרופיל, יעדים ויומן משלו. מי שיש לו טלפון משלו יכול לפתוח חשבון נפרד, עם מייל וסיסמה משלו.'
+        : 'המשתמשים נשמרים בדפדפן הזה, ולכל אחד יש פרופיל, יעדים ויומן משלו. אין סיסמה, וכל מי שמשתמש בדפדפן הזה יכול לעבור ביניהם.'),
+    state.mode === 'cloud' && CLOUD_USER ? h('div', { class: 'row' },
+      h('span', { class: 'muted small' }, 'מחובר כ-', h('bdi', null, CLOUD_USER.email || '')),
+      h('button', { class: 'btn ghost', type: 'button', onclick: signOutCloud }, 'התנתקות מהחשבון')) : null)];
 }
 
 /* Re-render for background updates, but never under someone typing in a form. */
@@ -778,6 +924,7 @@ function safeRender() {
 }
 function storageNote() {
   if (state.mode === 'db') return 'נשמר בחשבון שלך, פרטי לך בלבד';
+  if (state.mode === 'cloud') return 'נשמר בחשבון שלך ומסתנכרן בין מכשירים';
   if (state.localBroken) return 'הדפדפן הזה לא מאפשר שמירה';
   return 'נשמר בדפדפן הזה בלבד';
 }
@@ -1188,6 +1335,7 @@ function renderProfile(onboarding) {
     kcalManual: !!p0.kcalManual, proteinManual: !!p0.proteinManual };
   const out = [];
   const others = people().filter(x => x.id !== state.pid).length;
+  if (onboarding && !others) { const imp = importCard(); if (imp) out.push(imp); }
   if (onboarding) out.push(h('section', { class: 'card stack' },
     h('h2', null, others ? 'משתמש חדש' : 'ברוכים הבאים לצלחת'),
     h('p', { style: 'margin:0' }, 'כמה פרטים קצרים, וצלחת תחשב יעד קלורי ויעד חלבון. אחר כך רושמים מה אוכלים, ומקבלים ניתוח יומי, שבועי וחודשי. אפשר לשנות כל פרט וכל יעד בהמשך במסך "פרופיל".'),
@@ -1300,7 +1448,12 @@ function renderProfile(onboarding) {
     out.push(h('section', { class: 'card stack' }, h('h3', null, 'הנתונים שלך'),
       h('p', { style: 'margin:0' }, state.mode === 'db'
         ? 'היומן נשמר בחשבון Claude שלך ונגיש רק לך, גם מהטלפון וגם מהמחשב.'
-        : 'היומן נשמר בדפדפן הזה בלבד. בדפדפן או במכשיר אחר הוא לא יופיע.'),
+        : state.mode === 'cloud'
+          ? 'היומן נשמר בחשבון שלך ומסתנכרן בין כל המכשירים שבהם נכנסים עם המייל והסיסמה.'
+          : 'היומן נשמר בדפדפן הזה בלבד. בדפדפן או במכשיר אחר הוא לא יופיע.'),
+      state.mode === 'cloud' && CLOUD_USER ? h('div', { class: 'row' },
+        h('span', { class: 'muted small' }, 'מחובר כ-', h('bdi', null, CLOUD_USER.email || '')),
+        h('button', { class: 'btn', type: 'button', onclick: signOutCloud }, 'התנתקות מהחשבון')) : null,
       h('p', { class: 'muted small', style: 'margin:0' }, `ימים מתועדים: ${Object.keys(state.days).length} · מאכלים שהוספת בעצמך: ${state.custom.length}`),
       installPrompt ? h('div', { class: 'row' }, installButton('התקנה כאפליקציה בטלפון'),
         h('span', { class: 'muted small' }, 'אייקון במסך הבית, חלון משלה, עובדת גם בלי אינטרנט.')) : null,
