@@ -166,7 +166,10 @@ body.nav-on .topbar > .btn.ghost:first-child { display: none; }
 #timerbar .in { max-width: 640px; margin: 0 auto; display: flex; align-items: center; gap: 8px; padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
 #timerbar .t { font: 800 2rem var(--f-display); font-variant-numeric: tabular-nums; direction: ltr; min-width: 5.2ch; text-align: center; }
 #timerbar .grow { flex: 1; min-width: 0; }
-#timerbar .grow div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#timerbar .in { flex-wrap: wrap; row-gap: 0; }
+#timerbar .grow { flex: 1 1 100%; display: flex; gap: 6px; align-items: baseline; }
+#timerbar .grow div { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+#timerbar .t { margin-inline-end: auto; }
 #timerbar .btn { background: transparent; color: var(--bg); border-color: color-mix(in srgb, var(--bg) 35%, transparent); }
 #timerbar .btn:hover { background: color-mix(in srgb, var(--bg) 14%, transparent); }
 #timerbar.done { background: var(--red); color: #fff; }
@@ -291,6 +294,20 @@ body.nav-on .topbar > .btn.ghost:first-child { display: none; }
 .ex-t { display: flex; flex-direction: column; min-width: 0; }
 .pk-name { display: flex; flex-direction: column; min-width: 0; }
 .pk-item .he { font-weight: 600; }
+.sw-n { border: 0; background: transparent; padding: 0; min-height: var(--tap); border-radius: 10px; font-family: var(--f-display); font-weight: 700; color: var(--muted); cursor: pointer; }
+.sw-n:hover { background: var(--chip); }
+.sw-n.run { color: var(--on-accent); background: var(--accent); }
+.sw-line { display: flex; align-items: center; gap: 6px; margin-inline-start: 1.3rem; padding: 0 8px 4px; font-size: .85rem; color: var(--muted); }
+.sw-line .ico, .sw-line svg { width: 16px; height: 16px; }
+.sw-line b { color: var(--ink); font-family: var(--f-display); }
+.sw-line.run b { color: var(--accent); }
+.ct-form { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; background: var(--soft); border-radius: 12px; padding: 10px; }
+.ct-form label { font-weight: 600; font-size: .9rem; }
+.ct-form input { width: 6rem; min-height: var(--tap); text-align: center; font: 700 1.2rem var(--f-display); border: 1px solid var(--line-strong); border-radius: 10px; background: var(--surface); color: var(--ink); }
+.ct-form input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 30%, transparent); }
+.ct-hint, .ct-err { flex-basis: 100%; }
+.ct-err { color: var(--red); font-weight: 600; font-size: .9rem; }
+.ct-err:empty { display: none; }
 .seg.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .seg.three button { padding: 0 4px; font-size: .9rem; line-height: 1.2; }
 .stack-16 { display: flex; flex-direction: column; gap: 16px; }
@@ -462,6 +479,15 @@ const fmtN = n => (n == null || n === '' || isNaN(n)) ? '' : String(Math.round(n
 const norm = s => String(s).toLowerCase().replace(/[֑-ׇ"'׳״()\-–]/g, '').replace(/\s+/g, ' ').trim();
 const pad = n => String(n).padStart(2, '0');
 function clock(ms) { const s = Math.max(0, Math.floor(ms / 1000)), hh = Math.floor(s / 3600), mm = Math.floor(s / 60) % 60, ss = s % 60; return (hh ? hh + ':' + pad(mm) : mm) + ':' + pad(ss); }
+// Rest time typed by hand: "2:30" (minutes:seconds), "2.5" or "2,5" (minutes, up to 20), or "45" (seconds, above 20). Up to an hour.
+function parseRest(str) {
+  const t = String(str || '').trim().replace(/[׳'"]/g, '').replace(/דק(ות)?|שנ(יות)?|min|sec|s$/gi, '').trim();
+  let s = 0;
+  const mm = t.match(/^(\d{1,2})\s*[:.]\s*(\d{2})$/);
+  if (mm && t.includes(':')) s = +mm[1] * 60 + +mm[2];
+  else { const n = parseFloat(t.replace(',', '.')); if (!isFinite(n) || n <= 0) return 0; s = n <= 20 ? Math.round(n * 60) : Math.round(n); }
+  return s >= 5 && s <= 3600 ? s : 0;
+}
 function secLabel(s) { return s < 60 ? s + ' שנ׳' : Math.floor(s / 60) + ':' + pad(s % 60); }
 const dayFmt = new Intl.DateTimeFormat('he-IL', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 const timeFmt = new Intl.DateTimeFormat('he-IL', { hour: '2-digit', minute: '2-digit' });
@@ -646,17 +672,24 @@ function addExercise(ex) {
   const el = document.getElementById('ex-' + item.uid);
   if (el) { const inp = el.querySelector('input'); if (inp) inp.focus({ preventScroll: true }); el.scrollIntoView({ block: 'center' }); }
 }
+/* per-set stopwatch: {acc: ms already counted, t0: start time while running}. Timestamps, so it survives a reload. */
+const swMs = s => s.sw ? s.sw.acc + (s.sw.t0 ? Date.now() - s.sw.t0 : 0) : 0;
+function swStart(s) { s.sw = s.sw || { acc: 0, t0: null }; if (!s.sw.t0) s.sw.t0 = Date.now(); }
+function swStop(s) { if (s.sw && s.sw.t0) { s.sw.acc += Date.now() - s.sw.t0; s.sw.t0 = null; } }
 function addSet(item) {
   const n = item.sets.length, last = lastItem(item.key, S.current.start);
   let base = (last && last.it.sets[n]) ? { w: fmtN(last.it.sets[n].w), r: fmtN(last.it.sets[n].r) } : { ...(item.sets[n - 1] || { w: '', r: '' }) };
   if (S.current.prog) { const p = item.sets[n - 1] || { tw: 0, tr: 8 }; base = { w: p.tw > 0 ? fmtN(p.tw) : (p.w || ''), r: String(p.tr || num(p.r) || 8), tw: p.tw || num(p.w) || 0, tr: p.tr || num(p.r) || 8 }; }
+  for (const k of ['sw', 'done', 'c', 'e', 'ot', 'ow']) delete base[k];
+  item.sets.forEach(swStop);   // the previous set (and its rest) ends when a new set starts
+  swStart(base);
   item.sets.push(base); saveCurrent(); render();
   requestAnimationFrame(() => { const el = document.getElementById(`w-${item.uid}-${n}`); if (el) el.focus(); });
 }
 function finishWorkout() {
   const prog = !!S.current.prog;
   const items = S.current.items.map(it => ({ key: it.key, he: it.he, en: it.en, cat: it.cat, tsec: it.tsec || 0,
-    sets: it.sets.filter(s => !prog || s.done || s.e).map(s => { const o = { w: num(s.w), r: num(s.r) }; if (prog && s.ot) { o.ot = s.ot; o.ow = s.ow || 0; } if (s.c > 0) o.c = s.c; return o; })
+    sets: it.sets.filter(s => !prog || s.done || s.e).map(s => { const o = { w: num(s.w), r: num(s.r) }; if (prog && s.ot) { o.ot = s.ot; o.ow = s.ow || 0; } if (s.c > 0) o.c = s.c; const sec = Math.round(swMs(s) / 1000); if (sec > 0) o.sec = sec; return o; })
       .filter(s => (s.r > 0) || (s.w > 0)).map(s => ({ ...s, w: s.w > 0 ? s.w : 0, r: s.r > 0 ? s.r : 0 })) }))
     .filter(it => it.sets.length);
   if (!items.length) {
@@ -689,11 +722,11 @@ function compare(it, w) {
   if (b.r < pb.r) return { kind: 'down', text: `−${pb.r - b.r} חזרות` };
   return { kind: 'same', text: 'כמו בפעם הקודמת' };
 }
-const setText = s => (s.w > 0 ? `${fmtN(s.w)} ק״ג × ${fmtN(s.r)}` : `${fmtN(s.r)} חזרות`) + (s.c > 0 ? ` (+${s.c} השלמה)` : '');
+const setText = s => (s.w > 0 ? `${fmtN(s.w)} ק״ג × ${fmtN(s.r)}` : `${fmtN(s.r)} חזרות`) + (s.c > 0 ? ` (+${s.c} השלמה)` : '') + (s.sec > 0 ? ` · ⏱ ${clock(s.sec * 1000)}` : '');
 function reportText(w) {
   const st = stats(w), lines = [`אימון – ${dayFmt.format(w.start)}`, `${timeFmt.format(w.start)}–${timeFmt.format(w.end)} (${minutes(w.end - w.start)})`,
     `${st.ex} תרגילים · ${st.sets} סטים · ${st.reps} חזרות · נפח ${st.vol.toLocaleString('he-IL')} ק״ג`, ''];
-  for (const it of w.items) { lines.push(exName(it) + (it.en && it.he ? ` (${it.he})` : '')); it.sets.forEach((s, i) => lines.push(`  סט ${i + 1}: ${s.w > 0 ? fmtN(s.w) + ' ק״ג, ' : ''}${fmtN(s.r)} חזרות`)); }
+  for (const it of w.items) { lines.push(exName(it) + (it.en && it.he ? ` (${it.he})` : '')); it.sets.forEach((s, i) => lines.push(`  סט ${i + 1}: ${s.w > 0 ? fmtN(s.w) + ' ק״ג, ' : ''}${fmtN(s.r)} חזרות${s.sec > 0 ? ', זמן ' + clock(s.sec * 1000) : ''}`)); }
   return lines.join('\n');
 }
 
@@ -712,10 +745,31 @@ const exName = it => it.en || it.he;
 function exTitle(it, tag = 'b') {
   return [h(tag, { class: 'ex-en' }, h('bdi', null, exName(it))), it.en && it.he ? h('span', { class: 'he-sub' }, it.he) : null];
 }
-function startTimer(item, secs) { audioOn(); T = { uid: item.uid, label: exName(item), total: secs, acc: 0, base: Date.now(), running: true, done: false }; drawTimerBar(); }
+function startTimer(item, secs) { audioOn(); if (secs) askNotify(); T = { uid: item.uid, label: exName(item), total: secs, acc: 0, base: Date.now(), running: true, done: false }; drawTimerBar(); }
 function stopTimer() { T = null; drawTimerBar(); }
 const tElapsed = () => T.acc + (T.running ? Date.now() - T.base : 0);
+/* A system notification when the rest ends, for when the app is in the background (website / installed app only). */
+function askNotify() {
+  try { if ('Notification' in window && Notification.permission === 'default') Notification.requestPermission().catch(() => {}); } catch (e) { /* not available */ }
+}
+function notifyRestDone(label) {
+  try {
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    if (document.visibilityState === 'visible' && document.hasFocus()) return;   // on screen already: the sound, vibration and red bar are enough
+    const title = 'זמן המנוחה נגמר', opts = { body: label ? 'אפשר להתחיל את הסט הבא: ' + label : 'אפשר להתחיל את הסט הבא', tag: 'rest-timer', renotify: true,
+      vibrate: [250, 120, 250, 120, 250], icon: 'icon-192.png', badge: 'icon-192.png', lang: 'he', dir: 'rtl' };
+    if (navigator.serviceWorker && navigator.serviceWorker.controller) navigator.serviceWorker.ready.then(r => r.showNotification(title, opts)).catch(() => {});
+    else new Notification(title, opts);   // desktop browsers without the service worker
+  } catch (e) { /* notifications refused here */ }
+}
+// Wake up exactly when the rest ends, not on the next 250 ms tick (background pages tick rarely).
+let endTO = null;
+function scheduleEnd() {
+  clearTimeout(endTO);
+  if (T && T.total && T.running && !T.done) endTO = setTimeout(tick, Math.max(0, T.total * 1000 - tElapsed()) + 30);
+}
 function drawTimerBar() {
+  scheduleEnd();
   const bar = $('#timerbar');
   if (!T || S.view !== 'log') { bar.hidden = true; bar.replaceChildren(); return; }
   bar.hidden = false; bar.classList.toggle('done', T.done);
@@ -724,20 +778,22 @@ function drawTimerBar() {
   bar.replaceChildren(
     T.total ? h('div', { class: 'track' }, h('i', { id: 'tb-fill' })) : null,
     h('div', { class: 'in' },
-      h('div', { class: 'grow' }, h('div', { class: 'small' }, T.done ? 'זמן המנוחה נגמר' : (T.total ? 'מנוחה' : 'סטופר')), h('div', null, h('b', null, T.label))),
+      h('div', { class: 'grow' }, h('div', { class: 'small' }, T.done ? 'זמן המנוחה נגמר' : (T.total ? 'מנוחה' : 'סטופר')), h('div', null, h('b', null, h('bdi', null, T.label)))),
       h('div', { class: 't', id: 'tb-time' }, ''),
       T.done ? null : h('button', { class: 'btn icon', type: 'button', 'aria-label': T.running ? 'השהה' : 'המשך', onclick: toggle }, icon(T.running ? 'pause' : 'play')),
       h('button', { class: 'btn icon', type: 'button', 'aria-label': 'התחל מחדש', onclick: restart }, icon('again')),
       h('button', { class: 'btn icon', type: 'button', 'aria-label': 'סגור טיימר', onclick: stopTimer }, icon('x'))));
   tick();
 }
+let swEls = [];   // [element, set] pairs drawn by the last render
 function tick() {
   const c = $('#clock'); if (c && S.current) c.textContent = clock(Date.now() - S.current.start);
+  for (const [el, s] of swEls) if (el.isConnected) el.textContent = clock(swMs(s));
   if (!T) return;
   const el = $('#tb-time'), e = tElapsed();
   if (T.total) {
     const left = T.total * 1000 - e;
-    if (left <= 0 && !T.done) { T.done = true; T.running = false; T.acc = T.total * 1000; beep(); drawTimerBar(); $('#sr').textContent = 'זמן המנוחה נגמר: ' + T.label; return; }
+    if (left <= 0 && !T.done) { T.done = true; T.running = false; T.acc = T.total * 1000; beep(); notifyRestDone(T.label); drawTimerBar(); $('#sr').textContent = 'זמן המנוחה נגמר: ' + T.label; return; }
     if (el) el.textContent = clock(left + 999);
     const f = $('#tb-fill'); if (f) f.style.width = Math.min(100, e / (T.total * 10)) + '%';
   } else if (el) el.textContent = clock(e);
@@ -773,6 +829,7 @@ function go(view) {
 }
 function render() {
   const app = $('#app');
+  swEls = [];
   if (S.fatal) { app.replaceChildren(h('header', { class: 'hero' }, plates(), h('h1', null, 'יומן כושר')), h('p', { class: 'start-card', role: 'alert' }, S.fatal)); drawNav(); return; }
   if (!S.loaded) { app.replaceChildren(h('p', { class: 'muted', role: 'status' }, S.slow ? 'הטעינה לוקחת יותר זמן מהרגיל. היומן ייפתח כשהנתונים יגיעו.' : 'טוען את היומן…')); drawNav(); return; }
   if (S.needLogin) { app.replaceChildren(...renderLogin()); drawTimerBar(); drawNav(); return; }
@@ -944,27 +1001,58 @@ function renderExercise(it, idx) {
     last ? null : h('div', { class: 'prev' }, 'תרגיל חדש ביומן'),
     it.target ? h('div', { class: 'prev' }, 'יעד בתוכנית: ', h('span', null, it.target)) : null);
   if (S.timerOpen === it.uid) {
-    const opts = [30, 60, 90, 120, 180, 0];
-    card.append(h('div', { class: 'chips', role: 'group', 'aria-label': 'בחירת טיימר' },
-      opts.map(s => h('button', { type: 'button', class: 'chip', 'aria-pressed': String((it.tsec || 0) === s && (s > 0 || it.tsec === 0)),
-        onclick: () => { it.tsec = s; saveCurrent(); S.timerOpen = null; startTimer(it, s); render(); } }, s ? secLabel(s) : 'סטופר'))));
+    const opts = [30, 60, 90, 120, 180, 0], cur = it.tsec || 0, custom = cur > 0 && !opts.includes(cur);
+    const go = s => { it.tsec = s; saveCurrent(); S.timerOpen = null; S.customOpen = null; startTimer(it, s); render(); };
+    const chips = h('div', { class: 'chips', role: 'group', 'aria-label': 'בחירת טיימר' },
+      opts.map(s => h('button', { type: 'button', class: 'chip', 'aria-pressed': String(cur === s && !custom), onclick: () => go(s) }, s ? secLabel(s) : 'סטופר')),
+      h('button', { type: 'button', class: 'chip', 'aria-pressed': String(custom), 'aria-expanded': String(S.customOpen === it.uid),
+        onclick: () => { S.customOpen = S.customOpen === it.uid ? null : it.uid; render(); requestAnimationFrame(() => { const f = document.getElementById('ct-' + it.uid); if (f) f.focus(); }); } },
+        custom ? 'זמן אחר · ' + secLabel(cur) : 'זמן אחר'));
+    card.append(chips);
+    if (S.customOpen === it.uid) {
+      const inp = h('input', { id: 'ct-' + it.uid, type: 'text', inputmode: 'decimal', dir: 'ltr', value: custom ? secLabel(cur).replace(' שנ׳', '') : '', placeholder: '2:30', 'aria-describedby': 'cth-' + it.uid, autocomplete: 'off' });
+      const err = h('span', { class: 'ct-err', role: 'alert' });
+      const form = h('form', { class: 'ct-form', novalidate: true },
+        h('label', { for: 'ct-' + it.uid }, 'זמן מנוחה'), inp,
+        h('button', { type: 'submit', class: 'btn primary' }, icon('play'), 'הפעל'),
+        h('span', { id: 'cth-' + it.uid, class: 'muted small ct-hint' }, 'דקות (2.5), דקות ושניות (2:30), או שניות (45).'), err);
+      form.addEventListener('submit', e => {
+        e.preventDefault();
+        const s = parseRest(inp.value);
+        if (!s) { err.textContent = 'לא הבנתי את הזמן. למשל 2.5 או 2:30.'; inp.focus(); return; }
+        go(s);
+      });
+      card.append(form);
+    }
   }
-  const prog = !!S.current.prog, pc = prog ? ' prog' : '';
-  const sets = h('div', { class: 'sets' }, h('div', { class: 'srow head' + pc, 'aria-hidden': 'true' }, h('span', { style: 'text-align:center' }, 'סט'), h('span', { style: 'text-align:center' }, 'קודם'), h('span', { style: 'text-align:center' }, 'ק״ג'), h('span', { style: 'text-align:center' }, isTimed(it) && prog ? 'שניות' : 'חזרות'), prog ? h('span', { style: 'text-align:center' }, 'בוצע') : null, h('span')));
+  const prog = !!S.current.prog, pc = ' prog';   // every row has the ✓ column
+  const sets = h('div', { class: 'sets' }, h('div', { class: 'srow head' + pc, 'aria-hidden': 'true' }, h('span', { style: 'text-align:center' }, 'סט'), h('span', { style: 'text-align:center' }, 'קודם'), h('span', { style: 'text-align:center' }, 'ק״ג'), h('span', { style: 'text-align:center' }, isTimed(it) && prog ? 'שניות' : 'חזרות'), h('span', { style: 'text-align:center' }, 'בוצע'), h('span')));
   it.sets.forEach((s, j) => {
     const inp = (field, label) => h('input', { id: `${field}-${it.uid}-${j}`, type: 'text', inputmode: 'decimal', autocomplete: 'off', dir: 'ltr', value: s[field], 'aria-label': `${label}, סט ${j + 1}, ${it.he}` + (prog && s.tr ? `, יעד ${field === 'r' ? s.tr : fmtN(s.tw)}` : ''), placeholder: '0',
       oninput: e => { s[field] = e.target.value.replace(/[^\d.,]/g, ''); s.e = true; if (e.target.value !== s[field]) e.target.value = s[field]; saveCurrent(); },
       onfocus: e => e.target.select() });
-    const done = prog ? h('button', { class: 'btn icon check' + (s.done ? ' on' : ''), type: 'button', 'aria-pressed': String(!!s.done), 'aria-label': `סט ${j + 1} בוצע`,
-      onclick: () => { if (s.done) { s.done = false; s.c = 0; it.msg = null; } else { if (!num(s.r)) { toast('כתוב כמה חזרות עשית, ואז סמן בוצע.'); return; } onSetDone(it, j); }
-        saveCurrent(); render(); } }, icon('check')) : null;
+    const done = h('button', { class: 'btn icon check' + (s.done ? ' on' : ''), type: 'button', 'aria-pressed': String(!!s.done), 'aria-label': `סט ${j + 1} בוצע`,
+      onclick: () => {
+        if (s.done) { s.done = false; s.c = 0; it.msg = null; }
+        else { if (!num(s.r)) { toast('כתוב כמה חזרות עשית, ואז סמן בוצע.'); return; } swStop(s); if (prog) onSetDone(it, j); else s.done = true; }
+        saveCurrent(); render(); } }, icon('check'));
+    const running = !!(s.sw && s.sw.t0);
+    const nBtn = h('button', { type: 'button', class: 'n num sw-n' + (running ? ' run' : ''), 'aria-pressed': String(running),
+      'aria-label': `סט ${j + 1}: ${running ? 'עצור' : 'הפעל'} סטופר`, title: running ? 'עצור סטופר' : 'הפעל סטופר',
+      onclick: () => { if (running) swStop(s); else swStart(s); saveCurrent(); render(); } }, j + 1);
     // Last time's same set: read-only, so it stays visible while the inputs change.
     const ps = last && last.it.sets[j];
     const pv = ps ? (ps.w > 0 ? h('span', { class: 'pv', dir: 'ltr', 'aria-label': `פעם קודמת: ${fmtN(ps.w)} ק״ג, ${fmtN(ps.r)} חזרות` }, `${fmtN(ps.w)}×${fmtN(ps.r)}`)
       : h('span', { class: 'pv', 'aria-label': `פעם קודמת: ${fmtN(ps.r)} חזרות` }, `${fmtN(ps.r)} חז׳`))
       : h('span', { class: 'pv empty-pv', 'aria-label': 'אין נתון מהפעם הקודמת' }, '—');
-    sets.append(h('div', { class: 'srow' + pc + (s.done ? ' done' : '') }, h('span', { class: 'n num' }, j + 1), pv, inp('w', 'משקל'), inp('r', 'חזרות'), done,
+    sets.append(h('div', { class: 'srow' + pc + (s.done ? ' done' : '') }, nBtn, pv, inp('w', 'משקל'), inp('r', 'חזרות'), done,
       it.sets.length > 1 ? h('button', { class: 'btn icon', type: 'button', 'aria-label': `מחק סט ${j + 1}`, onclick: () => { it.sets.splice(j, 1); saveCurrent(); render(); } }, icon('x')) : h('span')));
+    if (s.sw) {
+      const tEl = h('b', { class: 'num' }, clock(swMs(s)));
+      swEls.push([tEl, s]);
+      sets.append(h('div', { class: 'sw-line' + (running ? ' run' : '') }, icon('timer'), h('span', null, `סט ${j + 1}: `), tEl,
+        h('span', { class: 'muted' }, running ? ' · רץ' : ' · נעצר')));
+    }
     // Short of the target: offer to finish the missing reps. They are logged but never counted in analysis or learning.
     const short = prog && s.done && s.tr ? s.tr - (num(s.r) || 0) : 0;
     if (s.c > 0) {

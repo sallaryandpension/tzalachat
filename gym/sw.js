@@ -1,5 +1,5 @@
 // Offline support for the installed gym log (scope ./gym/). build-site.ps1 stamps the version, so every rebuild replaces the cache.
-const VERSION = '20261125071958';
+const VERSION = '20261127071557';
 const CACHE = 'gym-' + VERSION;
 const CORE = ['./', './index.html', './manifest.webmanifest', './icon-192.png', './icon-512.png', './icon-maskable-512.png', '../firebase-config.js'];
 
@@ -36,4 +36,13 @@ self.addEventListener('fetch', e => {
       || (url.hostname === 'www.gstatic.com' && url.pathname.startsWith('/firebasejs/'))) {
     e.respondWith(caches.match(req).then(hit => hit || fetch(req).then(res => put(req, res))));
   }
+});
+
+// Tapping the "rest is over" notification brings the gym log back to the front (or opens it).
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+    const win = list.find(c => new URL(c.url).pathname.startsWith(new URL('./', self.location.href).pathname));
+    return win ? win.focus() : self.clients.openWindow('./');
+  }));
 });
