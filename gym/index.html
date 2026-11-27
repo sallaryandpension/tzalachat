@@ -681,8 +681,6 @@ function addSet(item) {
   let base = (last && last.it.sets[n]) ? { w: fmtN(last.it.sets[n].w), r: fmtN(last.it.sets[n].r) } : { ...(item.sets[n - 1] || { w: '', r: '' }) };
   if (S.current.prog) { const p = item.sets[n - 1] || { tw: 0, tr: 8 }; base = { w: p.tw > 0 ? fmtN(p.tw) : (p.w || ''), r: String(p.tr || num(p.r) || 8), tw: p.tw || num(p.w) || 0, tr: p.tr || num(p.r) || 8 }; }
   for (const k of ['sw', 'done', 'c', 'e', 'ot', 'ow']) delete base[k];
-  item.sets.forEach(swStop);   // the previous set (and its rest) ends when a new set starts
-  swStart(base);
   item.sets.push(base); saveCurrent(); render();
   requestAnimationFrame(() => { const el = document.getElementById(`w-${item.uid}-${n}`); if (el) el.focus(); });
 }
@@ -1034,12 +1032,13 @@ function renderExercise(it, idx) {
     const done = h('button', { class: 'btn icon check' + (s.done ? ' on' : ''), type: 'button', 'aria-pressed': String(!!s.done), 'aria-label': `סט ${j + 1} בוצע`,
       onclick: () => {
         if (s.done) { s.done = false; s.c = 0; it.msg = null; }
-        else { if (!num(s.r)) { toast('כתוב כמה חזרות עשית, ואז סמן בוצע.'); return; } swStop(s); if (prog) onSetDone(it, j); else s.done = true; }
+        else {
+          if (!num(s.r)) { toast('כתוב כמה חזרות עשית, ואז סמן בוצע.'); return; }
+          if (prog) onSetDone(it, j); else s.done = true;
+          if (it.tsec > 0) startTimer(it, it.tsec);   // the rest chosen for this exercise starts when the set is done
+        }
         saveCurrent(); render(); } }, icon('check'));
-    const running = !!(s.sw && s.sw.t0);
-    const nBtn = h('button', { type: 'button', class: 'n num sw-n' + (running ? ' run' : ''), 'aria-pressed': String(running),
-      'aria-label': `סט ${j + 1}: ${running ? 'עצור' : 'הפעל'} סטופר`, title: running ? 'עצור סטופר' : 'הפעל סטופר',
-      onclick: () => { if (running) swStop(s); else swStart(s); saveCurrent(); render(); } }, j + 1);
+    const nBtn = h('span', { class: 'n num' }, j + 1);
     // Last time's same set: read-only, so it stays visible while the inputs change.
     const ps = last && last.it.sets[j];
     const pv = ps ? (ps.w > 0 ? h('span', { class: 'pv', dir: 'ltr', 'aria-label': `פעם קודמת: ${fmtN(ps.w)} ק״ג, ${fmtN(ps.r)} חזרות` }, `${fmtN(ps.w)}×${fmtN(ps.r)}`)
@@ -1047,12 +1046,6 @@ function renderExercise(it, idx) {
       : h('span', { class: 'pv empty-pv', 'aria-label': 'אין נתון מהפעם הקודמת' }, '—');
     sets.append(h('div', { class: 'srow' + pc + (s.done ? ' done' : '') }, nBtn, pv, inp('w', 'משקל'), inp('r', 'חזרות'), done,
       it.sets.length > 1 ? h('button', { class: 'btn icon', type: 'button', 'aria-label': `מחק סט ${j + 1}`, onclick: () => { it.sets.splice(j, 1); saveCurrent(); render(); } }, icon('x')) : h('span')));
-    if (s.sw) {
-      const tEl = h('b', { class: 'num' }, clock(swMs(s)));
-      swEls.push([tEl, s]);
-      sets.append(h('div', { class: 'sw-line' + (running ? ' run' : '') }, icon('timer'), h('span', null, `סט ${j + 1}: `), tEl,
-        h('span', { class: 'muted' }, running ? ' · רץ' : ' · נעצר')));
-    }
     // Short of the target: offer to finish the missing reps. They are logged but never counted in analysis or learning.
     const short = prog && s.done && s.tr ? s.tr - (num(s.r) || 0) : 0;
     if (s.c > 0) {
